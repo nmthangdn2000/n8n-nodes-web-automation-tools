@@ -1,7 +1,6 @@
 import { Page } from 'playwright-core';
 import { listVoice } from './list-voice';
 import { launchBrowser } from '@/src/utils/browser.util';
-import { sleep } from '@/src/utils/common.util';
 import { SettingType } from '@/src/types/setting.type';
 
 type GenerateAudioAistudioCommandInputs = SettingType & {
@@ -29,7 +28,7 @@ export class GenerateAudioAistudioCommand {
 			await page.waitForSelector('button.toggle-button:has-text("Single-speaker audio")');
 			await page.click('button.toggle-button:has-text("Single-speaker audio")');
 
-			await sleep(1000);
+			await page.waitForTimeout(1000);
 
 			await this.selectVoice(page, this.settings.job.voice);
 
@@ -54,7 +53,7 @@ export class GenerateAudioAistudioCommand {
 			`.cdk-overlay-container #mat-select-4-panel mat-option:nth-child(${voiceIndex + 1})`,
 		);
 
-		await sleep(500);
+		await page.waitForTimeout(500);
 	}
 
 	private async generateAudio(page: Page, job: GenerateAudioAistudioCommandInputs['job']) {
@@ -68,7 +67,7 @@ export class GenerateAudioAistudioCommand {
 		await page.waitForSelector('run-button:not([disabled])');
 		await page.click('run-button');
 
-		await sleep(1000);
+		await page.waitForTimeout(1000);
 
 		await page.waitForSelector('run-button:not(:has-text("Stop"))', {
 			timeout: 1000 * 60 * 2,

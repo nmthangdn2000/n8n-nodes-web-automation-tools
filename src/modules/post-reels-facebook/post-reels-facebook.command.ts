@@ -34,9 +34,15 @@ export class PostReelsFacebookCommand {
 			}
 
 			if (this.settings.page) {
-				await retry(async () => {
-					await this.selectProfile(page, this.settings.page!);
-				});
+				await retry(
+					async () => {
+						await this.selectProfile(page, this.settings.page!);
+					},
+					3,
+					async () => {
+						await page.waitForTimeout(1000);
+					},
+				);
 			}
 
 			await this.postReels(page, this.settings);

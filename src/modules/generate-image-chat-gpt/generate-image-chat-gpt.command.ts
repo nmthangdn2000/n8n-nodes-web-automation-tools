@@ -1,5 +1,5 @@
 import { Page } from 'playwright-core';
-import { retry, sleep } from '@/src/utils/common.util';
+import { retry } from '@/src/utils/common.util';
 import { launchBrowser } from '@/src/utils/browser.util';
 import { IExecuteFunctions } from 'n8n-workflow';
 import { SettingType } from '@/src/types/setting.type';
@@ -57,9 +57,15 @@ export class GenerateImageChatGPTCommand {
 		await page.keyboard.type(prompt);
 		await page.keyboard.press('Enter');
 
-		await retry(async () => {
-			await this.waitOneOf(page);
-		});
+		await retry(
+			async () => {
+				await this.waitOneOf(page);
+			},
+			3,
+			async () => {
+				await page.waitForTimeout(1000);
+			},
+		);
 
 		return await this.getLastImageURLInLastResponse(page);
 	}
@@ -81,7 +87,7 @@ export class GenerateImageChatGPTCommand {
 	}
 
 	private async waitOneOf(page: Page) {
-		await sleep(1000);
+		await page.waitForTimeout(1000);
 
 		const articles = await page.$$('article[data-testid^="conversation-turn"]');
 		if (articles.length === 0) {
@@ -105,7 +111,7 @@ export class GenerateImageChatGPTCommand {
 	}
 
 	private async getLastImageURLInLastResponse(page: Page) {
-		await sleep(1000);
+		await page.waitForTimeout(1000);
 
 		const articles = await page.$$('article[data-testid^="conversation-turn"]');
 		if (articles.length === 0) {
