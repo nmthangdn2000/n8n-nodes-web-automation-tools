@@ -1,5 +1,11 @@
+export enum OS {
+	MACOS = 'macos',
+	WINDOWS = 'windows',
+	LINUX = 'linux',
+}
+
 export type SettingType = {
-	os: 'macos' | 'windows' | 'linux';
+	os: OS;
 	userDataDir?: string;
 	executablePath?: string;
 	showBrowser: boolean;

@@ -4,22 +4,23 @@ import { Audience } from './post-tiktok.enum';
 import { IExecuteFunctions } from 'n8n-workflow';
 import { SettingType } from '@/src/types/setting.type';
 
-type PostTiktokCommandInputs = SettingType & {
+type PostTiktokModuleInputs = SettingType & {
 	video_path: string;
 	description: string;
 	audience: keyof typeof Audience;
 	is_ai_generated: boolean;
-	run_copyright_check: boolean;
+	run_music_copyright_check: boolean;
+	run_content_check_lite: boolean;
 	is_comment_on: boolean;
 	is_duet_on: boolean;
 	is_stitch_on: boolean;
 };
 
-export class PostTiktokCommand {
-	private readonly settings: PostTiktokCommandInputs;
+export class PostTiktokModule {
+	private readonly settings: PostTiktokModuleInputs;
 	private readonly executeFunctions: IExecuteFunctions;
 
-	constructor(executeFunctions: IExecuteFunctions, settings: PostTiktokCommandInputs) {
+	constructor(executeFunctions: IExecuteFunctions, settings: PostTiktokModuleInputs) {
 		this.settings = settings;
 		this.executeFunctions = executeFunctions;
 	}
@@ -72,7 +73,9 @@ export class PostTiktokCommand {
 
 			await this.setSwitchAIGenerated(page, this.settings.is_ai_generated);
 
-			await this.setSwitchCopyright(page, this.settings.run_copyright_check);
+			await this.setSwitchCopyright(page, this.settings.run_music_copyright_check);
+
+			await this.setSwitchContentCheckLite(page, this.settings.run_content_check_lite);
 
 			await page.locator('.footer button[data-e2e="post_video_button"]').click();
 
@@ -147,7 +150,8 @@ export class PostTiktokCommand {
 	}
 
 	private async setSwitchCopyright(page: Page, checked: boolean) {
-		const switchContent = page.locator('.copyright-check .Switch__content');
+		const wrapper = page.locator('.copyright-check');
+		const switchContent = wrapper.locator('.Switch__content');
 
 		const isDisabled = await switchContent.getAttribute('data-disabled');
 		if (isDisabled === 'true') {
@@ -165,19 +169,55 @@ export class PostTiktokCommand {
 				//   timeout: 80000, // 80s
 				// });
 
-				const checkingIcon = page.locator('.tool-tip [data-icon="Hourglass"]');
-				await checkingIcon.waitFor({ state: 'visible', timeout: 5000 });
+				// const checkingIcon = page.locator('.tool-tip [data-icon="Hourglass"]');
+				// await checkingIcon.waitFor({ state: 'visible', timeout: 5000 });
 
-				await checkingIcon.waitFor({
-					state: 'hidden',
-					timeout: 80000,
+				// await checkingIcon.waitFor({
+				// 	state: 'hidden',
+				// 	timeout: 80000,
+				// });
+
+				// const successIcon = page.locator('.tool-tip.success [data-icon="Check"]');
+				// if (await successIcon.isVisible({ timeout: 2000 })) {
+				// 	this.executeFunctions.logger.info('🎉 Success icon detected. Done!');
+				// 	return;
+				// }
+
+				const parent = wrapper.locator('..');
+				const status = parent.locator('.status-result.status-success');
+				await status.waitFor({ state: 'visible', timeout: 600000 }); // 10 phút
+
+				this.executeFunctions.logger.info('🎉 Success icon detected. Done!');
+				return;
+			} catch (error) {
+				this.executeFunctions.logger.error('No success tooltip', {
+					message: (error as Error).message,
 				});
+			}
+		}
+	}
 
-				const successIcon = page.locator('.tool-tip.success [data-icon="Check"]');
-				if (await successIcon.isVisible({ timeout: 2000 })) {
-					this.executeFunctions.logger.info('🎉 Success icon detected. Done!');
-					return;
-				}
+	private async setSwitchContentCheckLite(page: Page, checked: boolean) {
+		const wrapper = page.locator('.headline-wrapper');
+		const switchContent = wrapper.locator('.headline-switch .Switch__content');
+
+		const isDisabled = await switchContent.getAttribute('data-disabled');
+		if (isDisabled === 'true') {
+			this.executeFunctions.logger.warn('⚠️ Switch is disabled. Cannot change state.');
+			return;
+		}
+
+		const current = await switchContent.getAttribute('aria-checked');
+		if ((checked && current === 'false') || (!checked && current === 'true')) {
+			await switchContent.click();
+
+			try {
+				const parent = wrapper.locator('..');
+				const status = parent.locator('.status-result.status-success');
+				await status.waitFor({ state: 'visible', timeout: 600000 }); // 10 phút
+
+				this.executeFunctions.logger.info('🎉 Success icon detected. Done!');
+				return;
 			} catch (error) {
 				this.executeFunctions.logger.error('No success tooltip', {
 					message: (error as Error).message,
