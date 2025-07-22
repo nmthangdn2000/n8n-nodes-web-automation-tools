@@ -39,7 +39,11 @@
 		],
 		"nodes": [
 			"dist/nodes/ExampleNode/ExampleNode.node.js",
-			"dist/nodes/HttpBin/HttpBin.node.js"
+			"dist/nodes/HttpBin/HttpBin.node.js",
+			"dist/nodes/PostVideoTiktokNode/PostVideoTiktokNode.node.js",
+			"dist/nodes/GenerateAudioAistudioNode/GenerateAudioAistudioNode.node.js",
+			"dist/nodes/GenerateImageChatGptNode/GenerateImageChatGptNode.node.js",
+			"dist/nodes/PostReelsFacebookNode/PostReelsFacebookNode.node.js"
 		]
 	},
 	"devDependencies": {
