@@ -13,7 +13,7 @@ export class PostVideoTiktokNode implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Post Video Tiktok Node',
 		name: 'postVideoTiktokNode',
-		group: ['Web Automation'],
+		group: ['transform'],
 		version: 1,
 		description: 'Post a video to Tiktok',
 		defaults: {

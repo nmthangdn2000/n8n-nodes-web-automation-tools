@@ -12,7 +12,7 @@ export class GenerateImageChatGptNode implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Generate Image ChatGPT',
 		name: 'generateImageChatGptNode',
-		group: ['Web Automation'],
+		group: ['transform'],
 		version: 1,
 		description: 'Generate image using ChatGPT',
 		defaults: {
@@ -91,7 +91,7 @@ export class GenerateImageChatGptNode implements INodeType {
 				json: {},
 				binary: imageBuffer
 					? {
-							image: imageBuffer,
+							data: imageBuffer,
 						}
 					: undefined,
 			};

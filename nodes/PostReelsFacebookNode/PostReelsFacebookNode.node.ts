@@ -12,7 +12,7 @@ export class PostReelsFacebookNode implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Post Reels Facebook',
 		name: 'postReelsFacebookNode',
-		group: ['Web Automation'],
+		group: ['transform'],
 		version: 1,
 		description: 'Post a reels video to Facebook',
 		defaults: {

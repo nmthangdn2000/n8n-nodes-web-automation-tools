@@ -13,7 +13,7 @@ export class GenerateAudioAistudioNode implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Generate Audio AI Studio',
 		name: 'generateAudioAistudioNode',
-		group: ['Web Automation'],
+		group: ['transform'],
 		version: 1,
 		description: 'Generate audio using Google AI Studio',
 		defaults: {
@@ -110,9 +110,16 @@ export class GenerateAudioAistudioNode implements INodeType {
 
 		const returnData = items.map((item) => {
 			return {
-				json: {
-					audioSrc,
-				},
+				json: {},
+				binary: audioSrc
+					? {
+							data: {
+								data: audioSrc,
+								filename: 'audio.mp3',
+								mimeType: 'audio/mpeg',
+							},
+						}
+					: undefined,
 			};
 		});
 
