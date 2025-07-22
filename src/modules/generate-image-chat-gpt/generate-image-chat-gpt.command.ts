@@ -51,7 +51,9 @@ export class GenerateImageChatGPTCommand {
 
 		await page.click(promptSelector); // click vào để focus
 		await page.fill(promptSelector, '');
-		await page.keyboard.type(prompt);
+		await page.keyboard.type(`
+			Generate an image with the following prompt: ${prompt}
+		`);
 		await page.keyboard.press('Enter');
 
 		await retry(

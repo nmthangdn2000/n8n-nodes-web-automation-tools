@@ -29,9 +29,13 @@ export class GenerateImageChatGptNode implements INodeType {
 				displayName: 'Prompt',
 				name: 'prompt',
 				type: 'string',
-				default: 'A beautiful landscape painting',
+				default: '',
 				placeholder: 'Enter the image description',
 				description: 'The prompt to generate the image',
+				typeOptions: {
+					rows: 4,
+				},
+				required: true,
 			},
 			{
 				displayName: 'Show Browser',
@@ -44,7 +48,7 @@ export class GenerateImageChatGptNode implements INodeType {
 				displayName: 'Is Close Browser',
 				name: 'isCloseBrowser',
 				type: 'boolean',
-				default: false,
+				default: true,
 				description: 'Whether to close the browser',
 			},
 			{

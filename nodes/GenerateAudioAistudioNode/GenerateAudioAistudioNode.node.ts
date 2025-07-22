@@ -33,6 +33,9 @@ export class GenerateAudioAistudioNode implements INodeType {
 				default: '',
 				placeholder: 'Speak in a calm and professional tone',
 				description: 'The style instruction for the audio generation',
+				typeOptions: {
+					rows: 2,
+				},
 			},
 			{
 				displayName: 'Voice',
@@ -50,9 +53,12 @@ export class GenerateAudioAistudioNode implements INodeType {
 				displayName: 'Prompt',
 				name: 'prompt',
 				type: 'string',
-				default: 'Hello, this is a test audio generation.',
+				default: '',
 				placeholder: 'Enter the text you want to convert to audio',
 				description: 'The text prompt to convert to audio',
+				typeOptions: {
+					rows: 4,
+				},
 			},
 			{
 				displayName: 'Show Browser',
@@ -65,7 +71,7 @@ export class GenerateAudioAistudioNode implements INodeType {
 				displayName: 'Is Close Browser',
 				name: 'isCloseBrowser',
 				type: 'boolean',
-				default: false,
+				default: true,
 				description: 'Whether to close the browser',
 			},
 			{

@@ -60,7 +60,7 @@ export class PostReelsFacebookNode implements INodeType {
 				displayName: 'Is Close Browser',
 				name: 'isCloseBrowser',
 				type: 'boolean',
-				default: false,
+				default: true,
 				description: 'Whether to close the browser',
 			},
 			{

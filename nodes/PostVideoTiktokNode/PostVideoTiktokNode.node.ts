@@ -56,20 +56,6 @@ export class PostVideoTiktokNode implements INodeType {
 				default: '',
 			},
 			{
-				displayName: 'Show Browser',
-				name: 'showBrowser',
-				type: 'boolean',
-				default: false,
-				description: 'Whether to show the browser',
-			},
-			{
-				displayName: 'Is Close Browser',
-				name: 'isCloseBrowser',
-				type: 'boolean',
-				default: false,
-				description: 'Whether to close the browser',
-			},
-			{
 				displayName: 'Is AI Generated',
 				name: 'isAiGenerated',
 				type: 'boolean',
@@ -110,6 +96,20 @@ export class PostVideoTiktokNode implements INodeType {
 				type: 'boolean',
 				default: false,
 				description: 'Whether to stitch the video',
+			},
+			{
+				displayName: 'Show Browser',
+				name: 'showBrowser',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to show the browser',
+			},
+			{
+				displayName: 'Is Close Browser',
+				name: 'isCloseBrowser',
+				type: 'boolean',
+				default: true,
+				description: 'Whether to close the browser',
 			},
 			{
 				displayName: 'OS',
