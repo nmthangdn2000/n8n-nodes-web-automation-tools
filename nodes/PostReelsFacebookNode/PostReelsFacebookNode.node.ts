@@ -12,7 +12,7 @@ export class PostReelsFacebookNode implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Post Reels Facebook',
 		name: 'postReelsFacebookNode',
-		group: ['transform'],
+		group: ['Web Automation'],
 		version: 1,
 		description: 'Post a reels video to Facebook',
 		defaults: {
@@ -104,14 +104,7 @@ export class PostReelsFacebookNode implements INodeType {
 		// Add the input parameters to the output
 		const returnData = items.map((item) => {
 			return {
-				...item,
-				json: {
-					...item.json,
-					videoPath: this.getNodeParameter('videoPath', 0) as string,
-					description: this.getNodeParameter('description', 0) as string,
-					page: this.getNodeParameter('page', 0) as string,
-					status: 'Reels posted successfully',
-				},
+				json: {},
 			};
 		});
 

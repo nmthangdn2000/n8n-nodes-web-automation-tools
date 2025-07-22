@@ -13,7 +13,7 @@ export class PostVideoTiktokNode implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Post Video Tiktok Node',
 		name: 'postVideoTiktokNode',
-		group: ['transform'],
+		group: ['Web Automation'],
 		version: 1,
 		description: 'Post a video to Tiktok',
 		defaults: {
@@ -155,6 +155,12 @@ export class PostVideoTiktokNode implements INodeType {
 
 		await postTiktokModule.run();
 
-		return [this.helpers.returnJsonArray(items)];
+		const returnData = items.map((item) => {
+			return {
+				json: {},
+			};
+		});
+
+		return [returnData];
 	}
 }

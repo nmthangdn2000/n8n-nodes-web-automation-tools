@@ -8,7 +8,6 @@ type GenerateAudioAistudioCommandInputs = SettingType & {
 		style_instruction: string;
 		voice: string;
 		prompt: string;
-		outputPath: string;
 	};
 };
 
@@ -32,7 +31,9 @@ export class GenerateAudioAistudioCommand {
 
 			await this.selectVoice(page, this.settings.job.voice);
 
-			await this.generateAudio(page, this.settings.job);
+			const audioSrc = await this.generateAudio(page, this.settings.job);
+
+			return audioSrc;
 		} catch (error) {
 			// console.log(`❌ Lỗi: ${error}`);
 			throw error;
@@ -56,7 +57,10 @@ export class GenerateAudioAistudioCommand {
 		await page.waitForTimeout(500);
 	}
 
-	private async generateAudio(page: Page, job: GenerateAudioAistudioCommandInputs['job']) {
+	private async generateAudio(
+		page: Page,
+		job: GenerateAudioAistudioCommandInputs['job'],
+	): Promise<string | null> {
 		await page.fill(
 			'.single-speaker-prompt-builder-wrapper > .style-instructions-textarea > textarea',
 			job.style_instruction,

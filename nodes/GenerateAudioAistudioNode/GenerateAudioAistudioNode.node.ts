@@ -13,7 +13,7 @@ export class GenerateAudioAistudioNode implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Generate Audio AI Studio',
 		name: 'generateAudioAistudioNode',
-		group: ['transform'],
+		group: ['Web Automation'],
 		version: 1,
 		description: 'Generate audio using Google AI Studio',
 		defaults: {
@@ -43,7 +43,8 @@ export class GenerateAudioAistudioNode implements INodeType {
 					name: voice,
 					value: voice,
 				})),
-				default: listVoice[0] as any,
+				default: '',
+				required: true,
 			},
 			{
 				displayName: 'Prompt',
@@ -52,14 +53,6 @@ export class GenerateAudioAistudioNode implements INodeType {
 				default: 'Hello, this is a test audio generation.',
 				placeholder: 'Enter the text you want to convert to audio',
 				description: 'The text prompt to convert to audio',
-			},
-			{
-				displayName: 'Output Path',
-				name: 'outputPath',
-				type: 'string',
-				default: './output/audio.mp3',
-				placeholder: '/path/to/output/audio.mp3',
-				description: 'The path where the audio file will be saved',
 			},
 			{
 				displayName: 'Show Browser',
@@ -110,23 +103,15 @@ export class GenerateAudioAistudioNode implements INodeType {
 				style_instruction: this.getNodeParameter('styleInstruction', 0) as string,
 				voice: this.getNodeParameter('voice', 0) as string,
 				prompt: this.getNodeParameter('prompt', 0) as string,
-				outputPath: this.getNodeParameter('outputPath', 0) as string,
 			},
 		});
 
-		await generateAudioCommand.run();
+		const audioSrc = await generateAudioCommand.run();
 
-		// Add the input parameters to the output
 		const returnData = items.map((item) => {
 			return {
-				...item,
 				json: {
-					...item.json,
-					styleInstruction: this.getNodeParameter('styleInstruction', 0) as string,
-					voice: this.getNodeParameter('voice', 0) as string,
-					prompt: this.getNodeParameter('prompt', 0) as string,
-					outputPath: this.getNodeParameter('outputPath', 0) as string,
-					status: 'Audio generation completed',
+					audioSrc,
 				},
 			};
 		});

@@ -12,7 +12,7 @@ export class GenerateImageChatGptNode implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Generate Image ChatGPT',
 		name: 'generateImageChatGptNode',
-		group: ['transform'],
+		group: ['Web Automation'],
 		version: 1,
 		description: 'Generate image using ChatGPT',
 		defaults: {
@@ -32,14 +32,6 @@ export class GenerateImageChatGptNode implements INodeType {
 				default: 'A beautiful landscape painting',
 				placeholder: 'Enter the image description',
 				description: 'The prompt to generate the image',
-			},
-			{
-				displayName: 'Output Path',
-				name: 'outputPath',
-				type: 'string',
-				default: './output/image.png',
-				placeholder: '/path/to/output/image.png',
-				description: 'The path where the image file will be saved',
 			},
 			{
 				displayName: 'Show Browser',
@@ -88,7 +80,6 @@ export class GenerateImageChatGptNode implements INodeType {
 			isCloseBrowser: this.getNodeParameter('isCloseBrowser', 0) as boolean,
 			job: {
 				prompt: this.getNodeParameter('prompt', 0) as string,
-				outputPath: this.getNodeParameter('outputPath', 0) as string,
 			},
 		});
 
@@ -97,13 +88,7 @@ export class GenerateImageChatGptNode implements INodeType {
 		// Add the generated image data to the output
 		const returnData = items.map((item) => {
 			return {
-				...item,
-				json: {
-					...item.json,
-					prompt: this.getNodeParameter('prompt', 0) as string,
-					outputPath: this.getNodeParameter('outputPath', 0) as string,
-					status: 'Image generation completed',
-				},
+				json: {},
 				binary: imageBuffer
 					? {
 							image: imageBuffer,

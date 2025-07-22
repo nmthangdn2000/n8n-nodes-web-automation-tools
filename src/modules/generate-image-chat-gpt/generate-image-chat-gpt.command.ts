@@ -7,7 +7,6 @@ import { SettingType } from '@/src/types/setting.type';
 type GenerateImageChatGPTCommandInputs = SettingType & {
 	job: {
 		prompt: string;
-		outputPath: string;
 	};
 };
 
@@ -29,13 +28,11 @@ export class GenerateImageChatGPTCommand {
 				timeout: 10000,
 			});
 
-			try {
-				const imageUrl = await this.generateImage(page, this.settings.job.prompt);
+			const imageUrl = await this.generateImage(page, this.settings.job.prompt);
 
-				return await this.downloadImage(imageUrl, this.settings.job.outputPath);
-			} catch (error) {
-				throw new Error(`❌ Lỗi: ${this.settings.job.prompt} - ${error}`);
-			}
+			const imageBuffer = await this.downloadImage(imageUrl);
+
+			return imageBuffer;
 		} catch (error) {
 			throw error;
 		} finally {
@@ -70,7 +67,7 @@ export class GenerateImageChatGPTCommand {
 		return await this.getLastImageURLInLastResponse(page);
 	}
 
-	private async downloadImage(imageUrl: string, outputPath: string) {
+	private async downloadImage(imageUrl: string) {
 		const imageResponse = await this.executeFunctions.helpers.httpRequest({
 			url: imageUrl,
 			method: 'GET',
