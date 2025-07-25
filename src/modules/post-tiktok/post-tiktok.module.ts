@@ -12,8 +12,7 @@ type PostTiktokModuleInputs = SettingType & {
 	run_music_copyright_check: boolean;
 	run_content_check_lite: boolean;
 	is_comment_on: boolean;
-	is_duet_on: boolean;
-	is_stitch_on: boolean;
+	is_reuse_of_content: boolean;
 };
 
 export class PostTiktokModule {
@@ -68,8 +67,7 @@ export class PostTiktokModule {
 			await page.locator('.more-btn').click();
 
 			await this.clickCheckboxByIndex(page, 0, this.settings.is_comment_on);
-			await this.clickCheckboxByIndex(page, 1, this.settings.is_duet_on);
-			await this.clickCheckboxByIndex(page, 2, this.settings.is_stitch_on);
+			await this.clickCheckboxByIndex(page, 1, this.settings.is_reuse_of_content);
 
 			await this.setSwitchAIGenerated(page, this.settings.is_ai_generated);
 

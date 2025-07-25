@@ -84,18 +84,11 @@ export class PostVideoTiktokNode implements INodeType {
 				description: 'Whether to comment on the video',
 			},
 			{
-				displayName: 'Is Duet On',
-				name: 'isDuetOn',
+				displayName: 'Is Reuse of Content',
+				name: 'isReuseOfContent',
 				type: 'boolean',
 				default: false,
 				description: 'Whether to duet on the video',
-			},
-			{
-				displayName: 'Is Stitch On',
-				name: 'isStitchOn',
-				type: 'boolean',
-				default: false,
-				description: 'Whether to stitch the video',
 			},
 			{
 				displayName: 'Show Browser',
@@ -149,8 +142,7 @@ export class PostVideoTiktokNode implements INodeType {
 			run_music_copyright_check: this.getNodeParameter('runMusicCopyrightCheck', 0) as boolean,
 			run_content_check_lite: this.getNodeParameter('runContentCheckLite', 0) as boolean,
 			is_comment_on: this.getNodeParameter('isCommentOn', 0) as boolean,
-			is_duet_on: this.getNodeParameter('isDuetOn', 0) as boolean,
-			is_stitch_on: this.getNodeParameter('isStitchOn', 0) as boolean,
+			is_reuse_of_content: this.getNodeParameter('isReuseOfContent', 0) as boolean,
 		});
 
 		await postTiktokModule.run();
