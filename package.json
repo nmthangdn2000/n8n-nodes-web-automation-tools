@@ -43,7 +43,8 @@
 			"dist/nodes/PostVideoTiktokNode/PostVideoTiktokNode.node.js",
 			"dist/nodes/GenerateAudioAistudioNode/GenerateAudioAistudioNode.node.js",
 			"dist/nodes/GenerateImageChatGptNode/GenerateImageChatGptNode.node.js",
-			"dist/nodes/PostReelsFacebookNode/PostReelsFacebookNode.node.js"
+			"dist/nodes/PostReelsFacebookNode/PostReelsFacebookNode.node.js",
+			"dist/nodes/PostReelsInstagramNode/PostReelsInstagramNode.node.js"
 		]
 	},
 	"devDependencies": {
