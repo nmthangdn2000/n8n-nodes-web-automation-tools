@@ -38,27 +38,60 @@ export class GenerateAudioAistudioNode implements INodeType {
 				},
 			},
 			{
-				displayName: 'Voice',
-				name: 'voice',
-				type: 'options',
-				description: 'The voice to use for audio generation',
-				options: listVoice.map((voice) => ({
-					name: voice,
-					value: voice,
-				})),
-				default: '',
-				required: true,
-			},
-			{
-				displayName: 'Prompt',
-				name: 'prompt',
-				type: 'string',
-				default: '',
-				placeholder: 'Enter the text you want to convert to audio',
-				description: 'The text prompt to convert to audio',
+				displayName: 'Speakers',
+				name: 'speakers',
+				type: 'fixedCollection',
 				typeOptions: {
-					rows: 4,
+					multipleValues: true,
 				},
+				default: {
+					speaker: [
+						{
+							name: 'speaker 1',
+							voice: listVoice[0],
+							prompt: '',
+						},
+					],
+				},
+				description: 'The speakers for audio generation',
+				options: [
+					{
+						name: 'speaker',
+						displayName: 'Speaker',
+						values: [
+							{
+								displayName: 'Name',
+								name: 'name',
+								type: 'string',
+								default: '',
+								description: 'The name of the speaker',
+							},
+							{
+								displayName: 'Voice',
+								name: 'voice',
+								type: 'options',
+								description: 'The voice to use for this speaker',
+								options: listVoice.map((voice) => ({
+									name: voice,
+									value: voice,
+								})),
+								default: '',
+								required: true,
+							},
+							{
+								displayName: 'Prompt',
+								name: 'prompt',
+								type: 'string',
+								default: '',
+								placeholder: 'Enter the text you want this speaker to say',
+								description: 'The text prompt for this speaker',
+								typeOptions: {
+									rows: 4,
+								},
+							},
+						],
+					},
+				],
 			},
 			{
 				displayName: 'Show Browser',
@@ -101,31 +134,56 @@ export class GenerateAudioAistudioNode implements INodeType {
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 
+		const speakersData = this.getNodeParameter('speakers', 0) as {
+			speaker?: Array<{
+				name: string;
+				voice: string;
+				prompt: string;
+			}>;
+		};
+
+		const speakers =
+			speakersData.speaker?.map((speaker) => ({
+				name: speaker.name,
+				voice: speaker.voice,
+				prompt: speaker.prompt,
+			})) || [];
+
 		const generateAudioCommand = new GenerateAudioAistudioCommand({
 			os: this.getNodeParameter('os', 0) as OS,
 			showBrowser: this.getNodeParameter('showBrowser', 0) as boolean,
 			isCloseBrowser: this.getNodeParameter('isCloseBrowser', 0) as boolean,
 			job: {
 				style_instruction: this.getNodeParameter('styleInstruction', 0) as string,
-				voice: this.getNodeParameter('voice', 0) as string,
-				prompt: this.getNodeParameter('prompt', 0) as string,
+				speakers: speakers,
 			},
 		});
 
-		const audioSrc = await generateAudioCommand.run();
+		const audioSrcs = await generateAudioCommand.run();
 
 		const returnData = items.map((item) => {
+			const binaryData: Record<string, any> = {};
+
+			if (audioSrcs.length > 0) {
+				audioSrcs.forEach((audioSrc, index) => {
+					binaryData[`audio_${index + 1}`] = {
+						data: audioSrc.audioSrc,
+						filename: audioSrc.name,
+						mimeType: 'audio/mpeg',
+					};
+				});
+			}
+
 			return {
-				json: {},
-				binary: audioSrc
-					? {
-							data: {
-								data: audioSrc,
-								filename: 'audio.mp3',
-								mimeType: 'audio/mpeg',
-							},
-						}
-					: undefined,
+				json: {
+					audioCount: audioSrcs.length,
+					audioFiles: audioSrcs.map((audioSrc, index) => ({
+						name: audioSrc.name,
+						index: index + 1,
+						binaryKey: `audio_${index + 1}`,
+					})),
+				},
+				binary: audioSrcs.length > 0 ? binaryData : undefined,
 			};
 		});
 

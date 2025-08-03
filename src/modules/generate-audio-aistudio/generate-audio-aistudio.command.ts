@@ -6,8 +6,10 @@ import { SettingType } from '@/src/types/setting.type';
 type GenerateAudioAistudioCommandInputs = SettingType & {
 	job: {
 		style_instruction: string;
-		voice: string;
-		prompt: string;
+		speakers: {
+			voice: string;
+			prompt: string;
+		}[];
 	};
 };
 
@@ -29,11 +31,30 @@ export class GenerateAudioAistudioCommand {
 
 			await page.waitForTimeout(1000);
 
-			await this.selectVoice(page, this.settings.job.voice);
+			const audioSrcs: {
+				name: string;
+				voice: string;
+				audioSrc: string;
+			}[] = [];
 
-			const audioSrc = await this.generateAudio(page, this.settings.job);
+			for (const speaker of this.settings.job.speakers) {
+				await this.selectVoice(page, speaker.voice);
+				const audioSrc = await this.generateAudio(
+					page,
+					speaker.prompt,
+					this.settings.job.style_instruction,
+				);
 
-			return audioSrc;
+				if (audioSrc) {
+					audioSrcs.push({
+						name: speaker.voice,
+						voice: speaker.voice,
+						audioSrc,
+					});
+				}
+			}
+
+			return audioSrcs;
 		} catch (error) {
 			// console.log(`❌ Lỗi: ${error}`);
 			throw error;
@@ -59,14 +80,15 @@ export class GenerateAudioAistudioCommand {
 
 	private async generateAudio(
 		page: Page,
-		job: GenerateAudioAistudioCommandInputs['job'],
+		prompt: string,
+		style_instruction: string,
 	): Promise<string | null> {
 		await page.fill(
 			'.single-speaker-prompt-builder-wrapper > .style-instructions-textarea > textarea',
-			job.style_instruction,
+			style_instruction,
 		);
 
-		await page.fill('.single-speaker-prompt-builder-wrapper >  textarea', job.prompt);
+		await page.fill('.single-speaker-prompt-builder-wrapper >  textarea', prompt);
 
 		await page.waitForSelector('run-button:not([disabled])');
 		await page.click('run-button');
