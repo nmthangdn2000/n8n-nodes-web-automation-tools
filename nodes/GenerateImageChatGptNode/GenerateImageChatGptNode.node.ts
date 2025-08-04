@@ -72,16 +72,103 @@ export class GenerateImageChatGptNode implements INodeType {
 					},
 				],
 			},
+			{
+				displayName: 'Browser Settings',
+				name: 'browserSettings',
+				type: 'collection',
+				default: {},
+				description: 'Configure browser settings',
+				options: [
+					{
+						displayName: 'Browser Height',
+						name: 'browserHeight',
+						type: 'number',
+						default: 1080,
+						description: 'The height of the browser window',
+					},
+					{
+						displayName: 'Browser Width',
+						name: 'browserWidth',
+						type: 'number',
+						default: 1920,
+						description: 'The width of the browser window',
+					},
+					{
+						displayName: 'Executable Path',
+						name: 'executablePath',
+						type: 'string',
+						default: '',
+						description: 'The executable path for the browser',
+					},
+					{
+						displayName: 'Locale',
+						name: 'locale',
+						type: 'string',
+						default: 'en-US',
+						description: 'The locale for the browser',
+					},
+					{
+						displayName: 'Timezone ID',
+						name: 'timezoneId',
+						type: 'string',
+						default: 'Asia/Tokyo',
+						description: 'The timezone for the browser',
+					},
+					{
+						displayName: 'User Agent',
+						name: 'userAgent',
+						type: 'string',
+						default:
+							'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+						description: 'The user agent for the browser',
+					},
+					{
+						displayName: 'User Data Dir',
+						name: 'userDataDir',
+						type: 'string',
+						default: '',
+						description: 'The user data directory for the browser',
+					},
+				],
+			},
 		],
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 
+		const browserSettingsData = this.getNodeParameter('browserSettings', 0) as {
+			settingType: string;
+			userDataDir?: string;
+			executablePath?: string;
+			browserWidth?: number;
+			browserHeight?: number;
+			locale?: string;
+			timezoneId?: string;
+			userAgent?: string;
+		};
+
+		const settings = browserSettingsData || {
+			userDataDir: undefined,
+			executablePath: undefined,
+			browserWidth: undefined,
+			browserHeight: undefined,
+			locale: undefined,
+			timezoneId: undefined,
+			userAgent: undefined,
+		};
+
 		const generateImageCommand = new GenerateImageChatGPTCommand(this, {
 			os: this.getNodeParameter('os', 0) as OS,
 			showBrowser: this.getNodeParameter('showBrowser', 0) as boolean,
 			isCloseBrowser: this.getNodeParameter('isCloseBrowser', 0) as boolean,
+			userDataDir: settings.userDataDir,
+			executablePath: settings.executablePath,
+			browserWidth: settings.browserWidth,
+			browserHeight: settings.browserHeight,
+			locale: settings.locale,
+			timezoneId: settings.timezoneId,
+			userAgent: settings.userAgent,
 			job: {
 				prompt: this.getNodeParameter('prompt', 0) as string,
 			},
