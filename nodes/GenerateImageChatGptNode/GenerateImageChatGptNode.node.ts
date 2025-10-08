@@ -48,16 +48,32 @@ export class GenerateImageChatGptNode implements INodeType {
 		const browserType = this.getNodeParameter('browserType', 0) as string;
 		const websocketUrl = this.getNodeParameter('websocketUrl', 0) as string;
 
-		const browserSettingsData = this.getNodeParameter('browserSettings', 0) as {
-			settingType: string;
-			userDataDir?: string;
-			executablePath?: string;
-			browserWidth?: number;
-			browserHeight?: number;
-			locale?: string;
-			timezoneId?: string;
-			userAgent?: string;
-		};
+		// Only get browserSettings when browserType is 'local'
+		let browserSettingsData:
+			| {
+					settingType: string;
+					userDataDir?: string;
+					executablePath?: string;
+					browserWidth?: number;
+					browserHeight?: number;
+					locale?: string;
+					timezoneId?: string;
+					userAgent?: string;
+			  }
+			| undefined;
+
+		if (browserType === 'local') {
+			browserSettingsData = this.getNodeParameter('browserSettings', 0) as {
+				settingType: string;
+				userDataDir?: string;
+				executablePath?: string;
+				browserWidth?: number;
+				browserHeight?: number;
+				locale?: string;
+				timezoneId?: string;
+				userAgent?: string;
+			};
+		}
 
 		const settings = browserSettingsData || {
 			userDataDir: undefined,
@@ -70,7 +86,7 @@ export class GenerateImageChatGptNode implements INodeType {
 		};
 
 		const generateImageCommand = new GenerateImageChatGPTCommand(this, {
-			os: this.getNodeParameter('os', 0) as OS,
+			os: browserType === 'local' ? (this.getNodeParameter('os', 0) as OS) : OS.WINDOWS,
 			showBrowser: this.getNodeParameter('showBrowser', 0) as boolean,
 			isCloseBrowser: this.getNodeParameter('isCloseBrowser', 0) as boolean,
 			userDataDir: settings.userDataDir,

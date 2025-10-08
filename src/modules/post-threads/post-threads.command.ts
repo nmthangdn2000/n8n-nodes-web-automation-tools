@@ -14,10 +14,10 @@ export class PostThreadCommand {
 	constructor(private readonly settings: PostThreadsCommandInputs) {}
 
 	async run() {
-		const browser = await launchBrowser(this.settings);
+		const { browser, context } = await launchBrowser(this.settings);
 
 		try {
-			const page = await browser.newPage();
+			const page = await context.newPage();
 
 			await page.goto('https://www.threads.com/login', {
 				waitUntil: 'domcontentloaded',
@@ -91,7 +91,7 @@ export class PostThreadCommand {
 		} catch (error) {
 			throw error;
 		} finally {
-			if (this.settings.isCloseBrowser) {
+			if (this.settings.isCloseBrowser && browser) {
 				await browser.close();
 			}
 		}

@@ -58,10 +58,19 @@ export const launchBrowser = async (settings: SettingType) => {
 	if (websocketUrl) {
 		// Connect to existing browser via WebSocket
 		const browser = await chromium.connectOverCDP(websocketUrl);
-		return browser;
+
+		let [context] = browser.contexts();
+		if (!context) {
+			context = await browser.newContext();
+		}
+
+		return { browser, context };
 	}
 
-	const browser = await chromium.launchPersistentContext(userDataDir, browserOptions);
+	const context = await chromium.launchPersistentContext(userDataDir, browserOptions);
 
-	return browser;
+	return {
+		browser: context.browser(),
+		context,
+	};
 };

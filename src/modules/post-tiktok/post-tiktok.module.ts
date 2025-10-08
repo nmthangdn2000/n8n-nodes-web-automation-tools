@@ -25,10 +25,10 @@ export class PostTiktokModule {
 	}
 
 	async run() {
-		const browser = await launchBrowser(this.settings);
+		const { browser, context } = await launchBrowser(this.settings);
 
 		try {
-			const page = await browser.newPage();
+			const page = await context.newPage();
 
 			await page.goto('https://www.tiktok.com/tiktokstudio/upload', {
 				waitUntil: 'networkidle',
@@ -83,7 +83,7 @@ export class PostTiktokModule {
 		} catch (error) {
 			throw error;
 		} finally {
-			if (this.settings.isCloseBrowser) {
+			if (this.settings.isCloseBrowser && browser) {
 				await browser.close();
 			}
 		}
