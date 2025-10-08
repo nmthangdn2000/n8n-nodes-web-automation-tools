@@ -15,4 +15,5 @@ export type SettingType = {
 	locale?: string;
 	timezoneId?: string;
 	userAgent?: string;
+	websocketUrl?: string;
 };

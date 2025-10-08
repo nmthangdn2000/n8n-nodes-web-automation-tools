@@ -8,6 +8,7 @@ import { NodeConnectionType } from 'n8n-workflow';
 import { PostTiktokModule } from '@/src/modules/post-tiktok/post-tiktok.module';
 import { Audience } from '@/src/modules/post-tiktok/post-tiktok.enum';
 import { OS } from '@/src/types/setting.type';
+import { getBrowserUIComponents } from '@/src/shared/browser-ui.components';
 
 export class PostVideoTiktokNode implements INodeType {
 	description: INodeTypeDescription = {
@@ -90,105 +91,15 @@ export class PostVideoTiktokNode implements INodeType {
 				default: false,
 				description: 'Whether to duet on the video',
 			},
-			{
-				displayName: 'Show Browser',
-				name: 'showBrowser',
-				type: 'boolean',
-				default: false,
-				description: 'Whether to show the browser',
-			},
-			{
-				displayName: 'Is Close Browser',
-				name: 'isCloseBrowser',
-				type: 'boolean',
-				default: true,
-				description: 'Whether to close the browser',
-			},
-			{
-				displayName: 'OS',
-				name: 'os',
-				type: 'options',
-				default: 'windows',
-				description: 'The operating system to use',
-				options: [
-					{
-						name: 'Windows',
-						value: 'windows',
-					},
-					{
-						name: 'MacOS',
-						value: 'macos',
-					},
-					{
-						name: 'Linux',
-						value: 'linux',
-					},
-				],
-			},
-			{
-				displayName: 'Browser Settings',
-				name: 'browserSettings',
-				type: 'collection',
-				default: {},
-				description: 'Configure browser settings',
-				options: [
-					{
-						displayName: 'Browser Height',
-						name: 'browserHeight',
-						type: 'number',
-						default: 1080,
-						description: 'The height of the browser window',
-					},
-					{
-						displayName: 'Browser Width',
-						name: 'browserWidth',
-						type: 'number',
-						default: 1920,
-						description: 'The width of the browser window',
-					},
-					{
-						displayName: 'Executable Path',
-						name: 'executablePath',
-						type: 'string',
-						default: '',
-						description: 'The executable path for the browser',
-					},
-					{
-						displayName: 'Locale',
-						name: 'locale',
-						type: 'string',
-						default: 'en-US',
-						description: 'The locale for the browser',
-					},
-					{
-						displayName: 'Timezone ID',
-						name: 'timezoneId',
-						type: 'string',
-						default: 'Asia/Tokyo',
-						description: 'The timezone for the browser',
-					},
-					{
-						displayName: 'User Agent',
-						name: 'userAgent',
-						type: 'string',
-						default:
-							'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-						description: 'The user agent for the browser',
-					},
-					{
-						displayName: 'User Data Dir',
-						name: 'userDataDir',
-						type: 'string',
-						default: '',
-						description: 'The user data directory for the browser',
-					},
-				],
-			},
+			...getBrowserUIComponents(),
 		],
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
+
+		const browserType = this.getNodeParameter('browserType', 0) as string;
+		const websocketUrl = this.getNodeParameter('websocketUrl', 0) as string;
 
 		const browserSettingsData = this.getNodeParameter('browserSettings', 0) as {
 			settingType: string;
@@ -223,6 +134,7 @@ export class PostVideoTiktokNode implements INodeType {
 			locale: settings.locale,
 			timezoneId: settings.timezoneId,
 			userAgent: settings.userAgent,
+			websocketUrl: browserType === 'remote' ? websocketUrl : undefined,
 			description: this.getNodeParameter('description', 0) as string,
 			audience: this.getNodeParameter('audience', 0) as keyof typeof Audience,
 			is_ai_generated: this.getNodeParameter('isAiGenerated', 0) as boolean,

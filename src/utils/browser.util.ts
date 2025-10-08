@@ -2,7 +2,16 @@ import { chromium } from 'playwright-core';
 import { SettingType } from '@/src/types/setting.type';
 
 export const launchBrowser = async (settings: SettingType) => {
-	const { os, showBrowser, browserWidth, browserHeight, locale, timezoneId, userAgent } = settings;
+	const {
+		os,
+		showBrowser,
+		browserWidth,
+		browserHeight,
+		locale,
+		timezoneId,
+		userAgent,
+		websocketUrl,
+	} = settings;
 
 	let { userDataDir, executablePath } = settings;
 
@@ -26,7 +35,7 @@ export const launchBrowser = async (settings: SettingType) => {
 		throw new Error('Unsupported platform: ' + os);
 	}
 
-	const browser = await chromium.launchPersistentContext(userDataDir, {
+	const browserOptions: any = {
 		headless: showBrowser ? false : true,
 		executablePath,
 		args: [
@@ -43,7 +52,16 @@ export const launchBrowser = async (settings: SettingType) => {
 		userAgent:
 			userAgent ||
 			'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-	});
+	};
+
+	// Add WebSocket URL if provided
+	if (websocketUrl) {
+		// Connect to existing browser via WebSocket
+		const browser = await chromium.connectOverCDP(websocketUrl);
+		return browser;
+	}
+
+	const browser = await chromium.launchPersistentContext(userDataDir, browserOptions);
 
 	return browser;
 };

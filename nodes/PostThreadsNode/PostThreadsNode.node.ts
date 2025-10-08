@@ -7,6 +7,7 @@ import type {
 import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
 import { PostThreadCommand } from '@/src/modules/post-threads/post-threads.command';
 import { OS } from '@/src/types/setting.type';
+import { getBrowserUIComponents } from '@/src/shared/browser-ui.components';
 
 export class PostThreadsNode implements INodeType {
 	description: INodeTypeDescription = {
@@ -178,100 +179,7 @@ export class PostThreadsNode implements INodeType {
 					},
 				},
 			},
-			{
-				displayName: 'Show Browser',
-				name: 'showBrowser',
-				type: 'boolean',
-				default: false,
-				description: 'Whether to show the browser (required for login)',
-			},
-			{
-				displayName: 'Is Close Browser',
-				name: 'isCloseBrowser',
-				type: 'boolean',
-				default: true,
-				description: 'Whether to close the browser after posting',
-			},
-			{
-				displayName: 'OS',
-				name: 'os',
-				type: 'options',
-				default: 'windows',
-				description: 'The operating system to use',
-				options: [
-					{
-						name: 'Windows',
-						value: 'windows',
-					},
-					{
-						name: 'MacOS',
-						value: 'macos',
-					},
-					{
-						name: 'Linux',
-						value: 'linux',
-					},
-				],
-			},
-			{
-				displayName: 'Browser Settings',
-				name: 'browserSettings',
-				type: 'collection',
-				default: {},
-				description: 'Configure browser settings',
-				options: [
-					{
-						displayName: 'Browser Height',
-						name: 'browserHeight',
-						type: 'number',
-						default: 1080,
-						description: 'The height of the browser window',
-					},
-					{
-						displayName: 'Browser Width',
-						name: 'browserWidth',
-						type: 'number',
-						default: 1920,
-						description: 'The width of the browser window',
-					},
-					{
-						displayName: 'Executable Path',
-						name: 'executablePath',
-						type: 'string',
-						default: '',
-						description: 'The executable path for the browser',
-					},
-					{
-						displayName: 'Locale',
-						name: 'locale',
-						type: 'string',
-						default: 'en-US',
-						description: 'The locale for the browser',
-					},
-					{
-						displayName: 'Timezone ID',
-						name: 'timezoneId',
-						type: 'string',
-						default: 'Asia/Tokyo',
-						description: 'The timezone for the browser',
-					},
-					{
-						displayName: 'User Agent',
-						name: 'userAgent',
-						type: 'string',
-						default:
-							'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-						description: 'The user agent for the browser',
-					},
-					{
-						displayName: 'User Data Dir',
-						name: 'userDataDir',
-						type: 'string',
-						default: '',
-						description: 'The user data directory for the browser',
-					},
-				],
-			},
+			...getBrowserUIComponents(),
 		],
 	};
 
@@ -346,6 +254,9 @@ export class PostThreadsNode implements INodeType {
 			}
 		}
 
+		const browserType = this.getNodeParameter('browserType', 0) as string;
+		const websocketUrl = this.getNodeParameter('websocketUrl', 0) as string;
+
 		const browserSettingsData = this.getNodeParameter('browserSettings', 0) as {
 			settingType: string;
 			userDataDir?: string;
@@ -378,6 +289,7 @@ export class PostThreadsNode implements INodeType {
 			locale: settings.locale,
 			timezoneId: settings.timezoneId,
 			userAgent: settings.userAgent,
+			websocketUrl: browserType === 'remote' ? websocketUrl : undefined,
 			media_files: mediaFiles,
 			description: this.getNodeParameter('description', 0) as string,
 			reply_threads: replyThreads,
