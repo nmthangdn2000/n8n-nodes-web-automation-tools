@@ -3,6 +3,8 @@ import { launchBrowser } from '@/src/utils/browser.util';
 import { Audience } from './post-tiktok.enum';
 import { IExecuteFunctions } from 'n8n-workflow';
 import { SettingType } from '@/src/types/setting.type';
+import { translate } from './language/translate';
+import { TLanguage } from '@/src/types/language.type';
 
 type PostTiktokModuleInputs = SettingType & {
 	video_path: string;
@@ -21,10 +23,12 @@ export class PostTiktokModule {
 	private readonly executeFunctions: IExecuteFunctions;
 	private warnings: string[] = [];
 	private errors: string[] = [];
+	private language: TLanguage;
 
 	constructor(executeFunctions: IExecuteFunctions, settings: PostTiktokModuleInputs) {
 		this.settings = settings;
 		this.executeFunctions = executeFunctions;
+		this.language = 'en';
 	}
 
 	async run() {
@@ -46,16 +50,28 @@ export class PostTiktokModule {
 				}
 			}
 
+			// <html lang="vi">
+			this.language = (await page.locator('html').getAttribute('lang')) as TLanguage;
+
 			try {
-				const cancelDraftButton = page.getByRole('button', { name: 'Hủy bỏ' });
+				const cancelDraftButton = page.getByRole('button', {
+					name: translate('cancel', this.language),
+				});
 				if (await cancelDraftButton.isVisible({ timeout: 2000 })) {
 					await cancelDraftButton.click();
 
-					await page.waitForSelector('.common-modal-footer .TUXButton-label:text("Hủy bỏ")', {
-						timeout: 3000,
-					});
+					await page.waitForSelector(
+						`.common-modal-footer .TUXButton-label:text("${translate('cancel', this.language)}")`,
+						{
+							timeout: 3000,
+						},
+					);
 
-					await page.locator('.common-modal-footer .TUXButton-label:text("Hủy bỏ")').click();
+					await page
+						.locator(
+							`.common-modal-footer .TUXButton-label:text("${translate('cancel', this.language)}")`,
+						)
+						.click();
 				}
 			} catch (e) {
 				this.executeFunctions.logger.error('No draft cancel popup', e);
@@ -358,7 +374,9 @@ export class PostTiktokModule {
 
 			await page.waitForTimeout(3000);
 
-			const editVideoButton = page.locator('button:has-text("Edit video")');
+			const editVideoButton = page.locator(
+				`button:has-text("${translate('editVideo', this.language)}")`,
+			);
 			await editVideoButton.click();
 
 			const modalEditVideo = page.locator('.TUXModal.common-modal[role="dialog"]');
@@ -376,7 +394,7 @@ export class PostTiktokModule {
 				const useButton = page
 					.locator('.music-card-container')
 					.first()
-					.locator('button:has-text("Use")');
+					.locator(`button:has-text("${translate('use', this.language)}")`);
 				await useButton.waitFor({ state: 'visible', timeout: 5000 });
 				await useButton.click();
 
