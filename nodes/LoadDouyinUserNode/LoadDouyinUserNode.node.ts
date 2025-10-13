@@ -35,6 +35,14 @@ export class LoadDouyinUserNode implements INodeType {
 				description: 'The Douyin user ID to load',
 				required: true,
 			},
+			{
+				displayName: 'Max Video Count',
+				name: 'maxVideoCount',
+				type: 'number',
+				default: 10,
+				description:
+					'Maximum number of videos to scrape from the user profile. Default is 10 videos. Set to 0 for no limit (not recommended as it may take a long time)',
+			},
 			...getBrowserUIComponents(),
 		],
 	};
@@ -70,6 +78,7 @@ export class LoadDouyinUserNode implements INodeType {
 			userAgent: browserSettingsData?.userAgent,
 			websocketUrl: websocketUrl,
 			userId: this.getNodeParameter('userId', 0) as string,
+			maxVideoCount: this.getNodeParameter('maxVideoCount', 0) as number,
 		};
 
 		const loadDouyinUserCommand = new LoadDouyinUserCommand(settings);

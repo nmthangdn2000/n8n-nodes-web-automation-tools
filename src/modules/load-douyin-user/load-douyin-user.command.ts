@@ -3,6 +3,7 @@ import { SettingType } from '../../types/setting.type';
 
 type LoadDouyinUserCommandInputs = SettingType & {
 	userId: string;
+	maxVideoCount?: number;
 };
 
 export class LoadDouyinUserCommand {
@@ -82,8 +83,9 @@ export class LoadDouyinUserCommand {
 			const userDetailStatus = await this.waitForUserDetailElement(page);
 
 			// Execute JavaScript logic to get video URLs
+			const maxVideoCount = this.settings.maxVideoCount || 10;
 			const scraperScript = `
-				(async function(userId) {
+				(async function(userId, maxVideos) {
 					const getid = async function(sec_user_id, max_cursor) {
 						const url = \`https://www.douyin.com/aweme/v1/web/aweme/post/?device_platform=webapp&aid=6383&channel=channel_pc_web&sec_user_id=\${sec_user_id}&max_cursor=\${max_cursor}&count=20&version_code=170400&version_name=17.4.0\`;
 						try {
@@ -119,11 +121,13 @@ export class LoadDouyinUserCommand {
 						}
 					};
 
-					const scrapeDouyinVideos = async function(userId) {
+					const scrapeDouyinVideos = async function(userId, maxVideos) {
 						try {
 							const result = [];
 							let hasMore = 1;
 							const sec_user_id = userId;
+							// Sử dụng maxVideos từ parameter, nếu không có thì dùng 10
+							const videoLimit = maxVideos || 10;
 
 							if (!sec_user_id) {
 								throw new Error("Invalid user ID");
@@ -133,7 +137,7 @@ export class LoadDouyinUserCommand {
 							let max_cursor = 0;
 							let errorCount = 0;
 
-							while (hasMore == 1 && errorCount < 5) {
+							while (hasMore == 1 && errorCount < 5 && (videoLimit === 0 || result.length < videoLimit)) {
 								try {
 									console.log(\`Loading more data, max_cursor = \${max_cursor}\`);
 									const moredata = await getid(sec_user_id, max_cursor);
@@ -150,6 +154,11 @@ export class LoadDouyinUserCommand {
 									max_cursor = moredata.max_cursor;
 
 									for (const video of moredata.aweme_list) {
+										// Dừng nếu đã đủ số video yêu cầu (trừ khi videoLimit = 0)
+										if (videoLimit > 0 && result.length >= videoLimit) {
+											break;
+										}
+
 										let videoUrl = "";
 										if (video.video && video.video.play_addr) {
 											videoUrl = video.video.play_addr.url_list[0];
@@ -196,7 +205,7 @@ export class LoadDouyinUserCommand {
 						}
 					};
 
-					return await scrapeDouyinVideos(userId);
+					return await scrapeDouyinVideos(userId, maxVideos);
 				})
 			`;
 
@@ -204,11 +213,19 @@ export class LoadDouyinUserCommand {
 			let videoUrls;
 			try {
 				videoUrls = await page.evaluate(
-					({ script, userId }: { script: string; userId: string }) => {
+					({
+						script,
+						userId,
+						maxVideoCount,
+					}: {
+						script: string;
+						userId: string;
+						maxVideoCount: number;
+					}) => {
 						const func = eval(script);
-						return func(userId);
+						return func(userId, maxVideoCount);
 					},
-					{ script: scraperScript, userId: this.settings.userId },
+					{ script: scraperScript, userId: this.settings.userId, maxVideoCount },
 				);
 			} catch (scriptError: any) {
 				videoUrls = {
