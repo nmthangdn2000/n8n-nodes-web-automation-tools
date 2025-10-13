@@ -13,11 +13,14 @@ type PostTiktokModuleInputs = SettingType & {
 	run_content_check_lite: boolean;
 	is_comment_on: boolean;
 	is_reuse_of_content: boolean;
+	auto_select_music: boolean;
 };
 
 export class PostTiktokModule {
 	private readonly settings: PostTiktokModuleInputs;
 	private readonly executeFunctions: IExecuteFunctions;
+	private warnings: string[] = [];
+	private errors: string[] = [];
 
 	constructor(executeFunctions: IExecuteFunctions, settings: PostTiktokModuleInputs) {
 		this.settings = settings;
@@ -25,6 +28,8 @@ export class PostTiktokModule {
 	}
 
 	async run() {
+		this.warnings = []; // Reset warnings array
+		this.errors = []; // Reset errors array
 		const { browser, context } = await launchBrowser(this.settings);
 
 		try {
@@ -58,7 +63,14 @@ export class PostTiktokModule {
 
 			await page.setInputFiles('input[type="file"]', this.settings.video_path);
 
-			await page.waitForSelector('.info-body .info-main span[data-icon="CheckCircleFill"]');
+			// check icon upload success
+			await page.waitForSelector('.info-body .info-main span[data-icon="CheckCircleFill"]', {
+				timeout: 600000, // 10 phút
+			});
+
+			if (this.settings.auto_select_music) {
+				await this.clickEditVideoButton(page);
+			}
 
 			await this.setDescription(page, this.settings.description);
 
@@ -71,15 +83,25 @@ export class PostTiktokModule {
 
 			await this.setSwitchAIGenerated(page, this.settings.is_ai_generated);
 
-			await this.setSwitchCopyright(page, this.settings.run_music_copyright_check);
-
-			await this.setSwitchContentCheckLite(page, this.settings.run_content_check_lite);
+			// Run both switches in parallel for better performance
+			await Promise.all([
+				this.setSwitchCopyright(page, this.settings.run_music_copyright_check),
+				this.setSwitchContentCheckLite(page, this.settings.run_content_check_lite),
+			]);
 
 			await page.locator('.footer button[data-e2e="post_video_button"]').click();
 
+			// Kiểm tra và xử lý modal cảnh báo nội dung nếu có
+			await this.handleContentWarningModal(page);
+
 			await page.waitForURL('https://www.tiktok.com/tiktokstudio/content');
 
-			return true;
+			return {
+				success: true,
+				message: 'Post video successfully',
+				warn: this.warnings.length > 0 ? this.warnings : undefined,
+				error: this.errors.length > 0 ? this.errors : undefined,
+			};
 		} catch (error) {
 			throw error;
 		} finally {
@@ -160,39 +182,9 @@ export class PostTiktokModule {
 		const current = await switchContent.getAttribute('aria-checked');
 		if ((checked && current === 'false') || (!checked && current === 'true')) {
 			await switchContent.click();
-
-			try {
-				// await page.locator('.copyright-check .tool-tip.success').waitFor({
-				//   state: 'visible',
-				//   timeout: 80000, // 80s
-				// });
-
-				// const checkingIcon = page.locator('.tool-tip [data-icon="Hourglass"]');
-				// await checkingIcon.waitFor({ state: 'visible', timeout: 5000 });
-
-				// await checkingIcon.waitFor({
-				// 	state: 'hidden',
-				// 	timeout: 80000,
-				// });
-
-				// const successIcon = page.locator('.tool-tip.success [data-icon="Check"]');
-				// if (await successIcon.isVisible({ timeout: 2000 })) {
-				// 	this.executeFunctions.logger.info('🎉 Success icon detected. Done!');
-				// 	return;
-				// }
-
-				const parent = wrapper.locator('..');
-				const status = parent.locator('.status-result.status-success');
-				await status.waitFor({ state: 'visible', timeout: 600000 }); // 10 phút
-
-				this.executeFunctions.logger.info('🎉 Success icon detected. Done!');
-				return;
-			} catch (error) {
-				this.executeFunctions.logger.error('No success tooltip', {
-					message: (error as Error).message,
-				});
-			}
 		}
+
+		await this.waitForCopyrightStatusResult(page, wrapper, 'copyright check');
 	}
 
 	private async setSwitchContentCheckLite(page: Page, checked: boolean) {
@@ -208,19 +200,199 @@ export class PostTiktokModule {
 		const current = await switchContent.getAttribute('aria-checked');
 		if ((checked && current === 'false') || (!checked && current === 'true')) {
 			await switchContent.click();
+		}
 
+		await this.waitForStatusResult(page, wrapper, 'content check');
+	}
+
+	private async waitForStatusResult(page: Page, wrapper: any, checkType: string) {
+		const parent = wrapper.locator('..');
+		const statusWrapper = parent.locator('.status-wrapper');
+
+		const maxWaitTime = 600000; // 10 phút
+		const startTime = Date.now();
+
+		while (Date.now() - startTime < maxWaitTime) {
 			try {
-				const parent = wrapper.locator('..');
-				const status = parent.locator('.status-result.status-success');
-				await status.waitFor({ state: 'visible', timeout: 600000 }); // 10 phút
+				const errorStatus = statusWrapper.locator('.status-result.status-error[data-show="true"]');
+				if (await errorStatus.isVisible({ timeout: 1000 })) {
+					const errorMessage = await errorStatus.locator('.status-tip').textContent();
+					const errorText = `${checkType} failed: ${errorMessage}`;
+					this.executeFunctions.logger.error(`❌ ${errorText}`);
+					this.errors.push(errorText);
+					throw new Error(`❌ ${errorText}`);
+				}
 
-				this.executeFunctions.logger.info('🎉 Success icon detected. Done!');
-				return;
+				const warnStatus = statusWrapper.locator('.status-result.status-warn[data-show="true"]');
+				if (await warnStatus.isVisible({ timeout: 1000 })) {
+					const warnMessage = await warnStatus.locator('.status-tip').textContent();
+					const warningText = `${checkType} warning: ${warnMessage}`;
+					this.executeFunctions.logger.warn(`⚠️ ${warningText}`);
+					this.warnings.push(warningText);
+					return;
+				}
+
+				const successStatus = statusWrapper.locator(
+					'.status-result.status-success[data-show="true"]',
+				);
+				if (await successStatus.isVisible({ timeout: 1000 })) {
+					const successMessage = await successStatus.locator('.status-tip').textContent();
+					this.executeFunctions.logger.info(`🎉 ${checkType} success: ${successMessage}`);
+					return;
+				}
+
+				const checkingStatus = statusWrapper.locator(
+					'.status-result.status-checking[data-show="true"]',
+				);
+				if (await checkingStatus.isVisible({ timeout: 1000 })) {
+					this.executeFunctions.logger.info(`⏳ ${checkType} is still checking...`);
+					await page.waitForTimeout(5000);
+					continue;
+				}
+
+				await page.waitForTimeout(2000);
 			} catch (error) {
-				this.executeFunctions.logger.error('No success tooltip', {
-					message: (error as Error).message,
-				});
+				if (error instanceof Error && error.message.includes('failed')) {
+					throw error;
+				}
+				await page.waitForTimeout(2000);
 			}
+		}
+
+		throw new Error(`⏰ ${checkType} timeout after 10 minutes`);
+	}
+
+	private async waitForCopyrightStatusResult(page: Page, wrapper: any, checkType: string) {
+		const statusWrapper = wrapper.locator('.status-wrapper');
+
+		const maxWaitTime = 600000; // 10 phút
+		const startTime = Date.now();
+
+		while (Date.now() - startTime < maxWaitTime) {
+			try {
+				const errorStatus = statusWrapper.locator('.status-result.status-error');
+				if (await errorStatus.isVisible({ timeout: 1000 })) {
+					const errorMessage = await errorStatus.locator('.status-tip').textContent();
+					const errorText = `${checkType} failed: ${errorMessage}`;
+					this.executeFunctions.logger.error(`❌ ${errorText}`);
+					this.errors.push(errorText);
+					throw new Error(`❌ ${errorText}`);
+				}
+
+				const warnStatus = statusWrapper.locator('.status-result.status-warn');
+				if (await warnStatus.isVisible({ timeout: 1000 })) {
+					const warnMessage = await warnStatus.locator('.status-tip').textContent();
+					const warningText = `${checkType} warning: ${warnMessage}`;
+					this.executeFunctions.logger.warn(`⚠️ ${warningText}`);
+					this.warnings.push(warningText);
+					return;
+				}
+
+				const successStatus = statusWrapper.locator('.status-result.status-success');
+				if (await successStatus.isVisible({ timeout: 1000 })) {
+					const successMessage = await successStatus.locator('.status-tip').textContent();
+					this.executeFunctions.logger.info(`🎉 ${checkType} success: ${successMessage}`);
+					return;
+				}
+
+				const checkingStatus = statusWrapper.locator('.status-result.status-checking');
+				if (await checkingStatus.isVisible({ timeout: 1000 })) {
+					this.executeFunctions.logger.info(`⏳ ${checkType} is still checking...`);
+					await page.waitForTimeout(5000);
+					continue;
+				}
+
+				await page.waitForTimeout(2000);
+			} catch (error) {
+				if (error instanceof Error && error.message.includes('failed')) {
+					throw error;
+				}
+				await page.waitForTimeout(2000);
+			}
+		}
+
+		throw new Error(`⏰ ${checkType} timeout after 10 minutes`);
+	}
+
+	private async handleContentWarningModal(page: Page) {
+		try {
+			const warningModal = page.locator('.TUXModal.common-modal[role="dialog"]');
+
+			if (await warningModal.isVisible({ timeout: 5000 })) {
+				this.executeFunctions.logger.info('⚠️ Content warning modal detected, closing it...');
+
+				// Thu thập thông tin cảnh báo từ modal
+				try {
+					const violationReason = await warningModal.locator('.reason-title').textContent();
+					if (violationReason) {
+						this.warnings.push(`Content warning: ${violationReason}`);
+					}
+				} catch (e) {
+					// Nếu không lấy được thông tin chi tiết, thêm cảnh báo chung
+					this.warnings.push('Content warning: Content may be restricted');
+				}
+
+				const closeButton = warningModal.locator('.common-modal-close');
+				if (await closeButton.isVisible({ timeout: 2000 })) {
+					await closeButton.click();
+					this.executeFunctions.logger.info('✅ Content warning modal closed successfully');
+
+					await page.waitForTimeout(1000);
+
+					await page.locator('.footer button[data-e2e="post_video_button"]').click();
+					this.executeFunctions.logger.info('🔄 Retrying post video after closing warning modal');
+				} else {
+					this.executeFunctions.logger.warn('⚠️ Could not find close button in warning modal');
+				}
+			} else {
+				this.executeFunctions.logger.info('✅ No content warning modal detected');
+			}
+		} catch (error) {
+			this.executeFunctions.logger.error('Error handling content warning modal:', error);
+		}
+	}
+
+	private async clickEditVideoButton(page: Page, autoSelectMusic: boolean = true) {
+		try {
+			this.executeFunctions.logger.info('🎬 Looking for Edit video button...');
+
+			await page.waitForTimeout(3000);
+
+			const editVideoButton = page.locator('button:has-text("Edit video")');
+			await editVideoButton.click();
+
+			const modalEditVideo = page.locator('.TUXModal.common-modal[role="dialog"]');
+			await modalEditVideo.waitFor({ state: 'visible', timeout: 10000 });
+
+			if (autoSelectMusic) {
+				await page.waitForSelector('.music-card-container', {
+					timeout: 15000,
+					state: 'visible',
+				});
+
+				const firstMusicCard = page.locator('.music-card-container').first();
+				await firstMusicCard.hover();
+
+				const useButton = page
+					.locator('.music-card-container')
+					.first()
+					.locator('button:has-text("Use")');
+				await useButton.waitFor({ state: 'visible', timeout: 5000 });
+				await useButton.click();
+
+				await page.waitForTimeout(2000);
+			} else {
+				this.executeFunctions.logger.info(
+					'🎵 Auto select music is disabled, skipping music selection',
+				);
+			}
+
+			const saveEditButton = page.locator('button[data-e2e="editor_save_button"]');
+			await saveEditButton.waitFor({ state: 'visible', timeout: 5000 });
+			await saveEditButton.click();
+		} catch (error) {
+			this.executeFunctions.logger.error('❌ Error clicking Edit video button:', error);
+			throw error;
 		}
 	}
 }

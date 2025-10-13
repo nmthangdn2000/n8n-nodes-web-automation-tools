@@ -117,7 +117,8 @@ export class GenerateAudioAistudioNode implements INodeType {
 			})) || [];
 
 		const browserType = this.getNodeParameter('browserType', 0) as string;
-		const websocketUrl = this.getNodeParameter('websocketUrl', 0) as string;
+		const websocketUrl =
+			browserType === 'remote' ? (this.getNodeParameter('websocketUrl', 0) as string) : undefined;
 
 		const browserSettingsData = this.getNodeParameter('browserSettings', 0) as {
 			settingType: string;
@@ -151,7 +152,7 @@ export class GenerateAudioAistudioNode implements INodeType {
 			locale: settings.locale,
 			timezoneId: settings.timezoneId,
 			userAgent: settings.userAgent,
-			websocketUrl: browserType === 'remote' ? websocketUrl : undefined,
+			websocketUrl: websocketUrl,
 			job: {
 				style_instruction: this.getNodeParameter('styleInstruction', 0) as string,
 				speakers: speakers,

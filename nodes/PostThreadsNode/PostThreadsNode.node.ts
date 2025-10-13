@@ -255,7 +255,8 @@ export class PostThreadsNode implements INodeType {
 		}
 
 		const browserType = this.getNodeParameter('browserType', 0) as string;
-		const websocketUrl = this.getNodeParameter('websocketUrl', 0) as string;
+		const websocketUrl =
+			browserType === 'remote' ? (this.getNodeParameter('websocketUrl', 0) as string) : undefined;
 
 		const browserSettingsData = this.getNodeParameter('browserSettings', 0) as {
 			settingType: string;
@@ -289,7 +290,7 @@ export class PostThreadsNode implements INodeType {
 			locale: settings.locale,
 			timezoneId: settings.timezoneId,
 			userAgent: settings.userAgent,
-			websocketUrl: browserType === 'remote' ? websocketUrl : undefined,
+			websocketUrl: websocketUrl,
 			media_files: mediaFiles,
 			description: this.getNodeParameter('description', 0) as string,
 			reply_threads: replyThreads,

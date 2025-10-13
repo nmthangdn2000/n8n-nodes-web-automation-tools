@@ -91,6 +91,14 @@ export class PostVideoTiktokNode implements INodeType {
 				default: false,
 				description: 'Whether to duet on the video',
 			},
+			{
+				displayName: 'Auto Select Music',
+				name: 'autoSelectMusic',
+				type: 'boolean',
+				default: true,
+				description:
+					'Whether to automatically select the first available music in Edit Video modal',
+			},
 			...getBrowserUIComponents(),
 		],
 	};
@@ -99,7 +107,8 @@ export class PostVideoTiktokNode implements INodeType {
 		const items = this.getInputData();
 
 		const browserType = this.getNodeParameter('browserType', 0) as string;
-		const websocketUrl = this.getNodeParameter('websocketUrl', 0) as string;
+		const websocketUrl =
+			browserType === 'remote' ? (this.getNodeParameter('websocketUrl', 0) as string) : undefined;
 
 		const browserSettingsData = this.getNodeParameter('browserSettings', 0) as {
 			settingType: string;
@@ -134,7 +143,7 @@ export class PostVideoTiktokNode implements INodeType {
 			locale: settings.locale,
 			timezoneId: settings.timezoneId,
 			userAgent: settings.userAgent,
-			websocketUrl: browserType === 'remote' ? websocketUrl : undefined,
+			websocketUrl: websocketUrl,
 			description: this.getNodeParameter('description', 0) as string,
 			audience: this.getNodeParameter('audience', 0) as keyof typeof Audience,
 			is_ai_generated: this.getNodeParameter('isAiGenerated', 0) as boolean,
@@ -142,13 +151,16 @@ export class PostVideoTiktokNode implements INodeType {
 			run_content_check_lite: this.getNodeParameter('runContentCheckLite', 0) as boolean,
 			is_comment_on: this.getNodeParameter('isCommentOn', 0) as boolean,
 			is_reuse_of_content: this.getNodeParameter('isReuseOfContent', 0) as boolean,
+			auto_select_music: this.getNodeParameter('autoSelectMusic', 0) as boolean,
 		});
 
-		await postTiktokModule.run();
+		const result = await postTiktokModule.run();
 
 		const returnData = items.map((item) => {
 			return {
-				json: {},
+				json: {
+					...result,
+				},
 			};
 		});
 

@@ -46,7 +46,8 @@ export class GenerateImageChatGptNode implements INodeType {
 		const items = this.getInputData();
 
 		const browserType = this.getNodeParameter('browserType', 0) as string;
-		const websocketUrl = this.getNodeParameter('websocketUrl', 0) as string;
+		const websocketUrl =
+			browserType === 'remote' ? (this.getNodeParameter('websocketUrl', 0) as string) : undefined;
 
 		// Only get browserSettings when browserType is 'local'
 		let browserSettingsData:
@@ -96,7 +97,7 @@ export class GenerateImageChatGptNode implements INodeType {
 			locale: settings.locale,
 			timezoneId: settings.timezoneId,
 			userAgent: settings.userAgent,
-			websocketUrl: browserType === 'remote' ? websocketUrl : undefined,
+			websocketUrl: websocketUrl,
 			job: {
 				prompt: this.getNodeParameter('prompt', 0) as string,
 			},

@@ -58,7 +58,8 @@ export class PostReelsFacebookNode implements INodeType {
 		const items = this.getInputData();
 
 		const browserType = this.getNodeParameter('browserType', 0) as string;
-		const websocketUrl = this.getNodeParameter('websocketUrl', 0) as string;
+		const websocketUrl =
+			browserType === 'remote' ? (this.getNodeParameter('websocketUrl', 0) as string) : undefined;
 
 		const browserSettingsData = this.getNodeParameter('browserSettings', 0) as {
 			settingType: string;
@@ -92,7 +93,7 @@ export class PostReelsFacebookNode implements INodeType {
 			locale: settings.locale,
 			timezoneId: settings.timezoneId,
 			userAgent: settings.userAgent,
-			websocketUrl: browserType === 'remote' ? websocketUrl : undefined,
+			websocketUrl: websocketUrl,
 			video_path: this.getNodeParameter('videoPath', 0) as string,
 			description: this.getNodeParameter('description', 0) as string,
 			page: this.getNodeParameter('page', 0) as string,
