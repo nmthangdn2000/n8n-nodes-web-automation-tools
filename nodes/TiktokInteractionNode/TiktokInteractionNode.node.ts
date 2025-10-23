@@ -27,6 +27,28 @@ export class TiktokInteractionNode implements INodeType {
 		outputs: [NodeConnectionType.Main],
 		properties: [
 			{
+				displayName: 'Search',
+				name: 'search',
+				type: 'string',
+				default: '',
+				placeholder: 'Enter your search query',
+				description: 'The search query to use',
+			},
+			{
+				displayName: 'Video Count',
+				name: 'videoCount',
+				type: 'number',
+				default: '',
+				description: 'The number of videos to spam',
+			},
+			{
+				displayName: 'Follow',
+				name: 'enableFollow',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to enable follow interaction',
+			},
+			{
 				displayName: 'Like',
 				name: 'enableLike',
 				type: 'boolean',
@@ -95,10 +117,16 @@ export class TiktokInteractionNode implements INodeType {
 			userAgent: undefined,
 		};
 
+		const enableComment = this.getNodeParameter('enableComment', 0) as boolean;
+		const commentText = enableComment ? (this.getNodeParameter('commentText', 0) as string) : '';
+
 		const tiktokInteractionModule = new TiktokInteractionModule(this, {
+			search: this.getNodeParameter('search', 0) as string,
+			videoCount: this.getNodeParameter('videoCount', 0) as number,
+			enableFollow: this.getNodeParameter('enableFollow', 0) as boolean,
 			enableLike: this.getNodeParameter('enableLike', 0) as boolean,
-			enableComment: this.getNodeParameter('enableComment', 0) as boolean,
-			commentText: this.getNodeParameter('commentText', 0) as string,
+			enableComment: enableComment,
+			commentText: commentText,
 			actionInterval: this.getNodeParameter('actionInterval', 0) as string,
 			os: this.getNodeParameter('os', 0) as OS,
 			showBrowser: this.getNodeParameter('showBrowser', 0) as boolean,

@@ -4,6 +4,9 @@ import { IExecuteFunctions } from 'n8n-workflow';
 import { SettingType } from '@/src/types/setting.type';
 
 type TiktokInteractionModuleInputs = SettingType & {
+	search?: string;
+	videoCount?: number;
+	enableFollow: boolean;
 	enableLike: boolean;
 	enableComment: boolean;
 	commentText?: string;
@@ -60,44 +63,10 @@ export class TiktokInteractionModule {
 				}
 			}
 
-			await page.waitForSelector('#column-list-container', { state: 'visible', timeout: 5000 });
-
-			let errorCount = 0;
-
-			while (errorCount <= 5) {
-				this.executeFunctions.logger.info('🔄 Scrolling and interacting with TikTok feed...');
-				await this.humanScrollOnArticle(page.locator('#column-list-container'), page);
-
-				await page.waitForTimeout(this.parseActionInterval(this.settings.actionInterval));
-
-				const visibleArticle = page
-					.locator('#column-list-container article:not([style*="transition-duration: 0ms"])')
-					.filter({
-						has: page.locator('*'),
-					})
-					.first();
-
-				try {
-					await this.likeVideo(page, visibleArticle);
-				} catch (error) {
-					this.executeFunctions.logger.error('❌ Error liking video:', error);
-					errorCount++;
-					continue;
-				}
-
-				if (this.settings.enableComment && this.settings.commentText) {
-					try {
-						await this.commentOnVideo(page, visibleArticle, this.settings.commentText);
-					} catch (error) {
-						this.executeFunctions.logger.error('❌ Error commenting on video:', error);
-						errorCount++;
-						continue;
-					}
-				}
-
-				await page.waitForTimeout(this.parseActionInterval(this.settings.actionInterval));
-
-				errorCount = 0;
+			if (this.settings.search) {
+				await this.searchPage(page);
+			} else {
+				await this.homePage(page);
 			}
 
 			return {
@@ -110,6 +79,150 @@ export class TiktokInteractionModule {
 			if (this.settings.isCloseBrowser && browser) {
 				await browser.close();
 			}
+		}
+	}
+
+	private async searchPage(page: Page) {
+		await page.goto(`https://www.tiktok.com/search?q=${this.settings.search}`, {
+			waitUntil: 'networkidle',
+		});
+
+		const videoContainer = page.locator('#column-item-video-container-0');
+		await videoContainer.waitFor({ state: 'visible', timeout: 5000 });
+
+		const aTag = videoContainer.locator('a').first();
+		await aTag.waitFor({ state: 'visible', timeout: 5000 });
+		await aTag.click();
+
+		let errorCount = 0;
+
+		let videoCount = 0;
+
+		while (
+			errorCount <= 5 &&
+			(this.settings.videoCount ? videoCount < this.settings.videoCount : true)
+		) {
+			try {
+				this.executeFunctions.logger.info('🔄 Scrolling and interacting with TikTok feed...');
+
+				await this.humanScrollOnArticle(videoContainer, page);
+				await page.waitForTimeout(this.parseActionInterval(this.settings.actionInterval));
+
+				// click follow button
+				if (this.settings.enableFollow) {
+					const followButton = page.locator('[data-e2e="browse-follow"]');
+
+					await followButton.waitFor({ state: 'attached', timeout: 5000 });
+					const text = await followButton.innerText();
+
+					if (text.trim() === 'Follow') {
+						await this.humanClick(followButton, page);
+						await page.waitForTimeout(1000);
+					}
+				}
+
+				// click vào button like
+				if (this.settings.enableLike) {
+					const likeButton = page.locator('[data-e2e="browse-like-icon"]');
+					await likeButton.waitFor({ state: 'visible', timeout: 5000 });
+					await this.humanClick(likeButton, page);
+					await page.waitForTimeout(1000);
+				}
+
+				// comment on video
+				if (
+					this.settings.enableComment &&
+					this.settings.commentText &&
+					this.settings.commentText.length > 0
+				) {
+					const commentBox = page.locator('[data-e2e="comment-input"] [contenteditable="true"]');
+					await commentBox.waitFor({ state: 'visible', timeout: 5000 });
+					await commentBox.click({ force: true });
+					await page.keyboard.type(this.settings.commentText, { delay: 20 });
+					await page.waitForTimeout(1000);
+					await page.locator('[data-e2e="comment-post"][aria-disabled="false"]').click();
+					await page.waitForTimeout(1000);
+				}
+			} catch (error) {
+				await this.checkCaptcha(page, errorCount);
+
+				this.executeFunctions.logger.error('❌ Error liking video:', error.message);
+				errorCount++;
+				continue;
+			}
+
+			await page.waitForTimeout(this.parseActionInterval(this.settings.actionInterval));
+
+			await this.humanScrollOnArticle(videoContainer, page);
+
+			errorCount = 0;
+			videoCount++;
+		}
+	}
+
+	private async homePage(page: Page) {
+		await page.waitForSelector('#column-list-container', { state: 'visible', timeout: 5000 });
+
+		let errorCount = 0;
+		let videoCount = 0;
+		while (
+			errorCount <= 5 &&
+			(this.settings.videoCount ? videoCount < this.settings.videoCount : true)
+		) {
+			this.executeFunctions.logger.info('🔄 Scrolling and interacting with TikTok feed...');
+			await this.humanScrollOnArticle(page.locator('#column-list-container'), page);
+
+			await page.waitForTimeout(this.parseActionInterval(this.settings.actionInterval));
+
+			const visibleArticle = page
+				.locator('#column-list-container article:not([style*="transition-duration: 0ms"])')
+				.filter({
+					has: page.locator('*'),
+				})
+				.first();
+
+			try {
+				if (this.settings.enableFollow) {
+					await this.followUser(page, visibleArticle);
+				}
+
+				if (this.settings.enableLike) {
+					await this.likeVideo(page, visibleArticle);
+				}
+
+				if (
+					this.settings.enableComment &&
+					this.settings.commentText &&
+					this.settings.commentText.length > 0
+				) {
+					await this.commentOnVideo(page, visibleArticle, this.settings.commentText);
+				}
+			} catch (error) {
+				await this.checkCaptcha(page, errorCount);
+
+				this.executeFunctions.logger.error('❌ Error commenting on video:', error);
+				errorCount++;
+				continue;
+			}
+
+			await page.waitForTimeout(this.parseActionInterval(this.settings.actionInterval));
+
+			errorCount = 0;
+			videoCount++;
+		}
+	}
+
+	private async followUser(page: Page, visibleArticle: Locator) {
+		try {
+			this.executeFunctions.logger.info('👤 Attempting to follow user...');
+			const followButton = visibleArticle.locator('[data-e2e="feed-follow"]');
+			await followButton.waitFor({ state: 'visible', timeout: 5000 });
+			await this.humanClick(followButton, page);
+			await page.waitForTimeout(1000);
+			this.executeFunctions.logger.info('✅ User followed successfully');
+		} catch (error) {
+			this.executeFunctions.logger.error('❌ Error following user:', error);
+			throw error;
 		}
 	}
 
@@ -224,5 +337,80 @@ export class TiktokInteractionModule {
 		await page.waitForTimeout(200 + Math.random() * 150);
 		await page.keyboard.press('ArrowDown');
 		await page.waitForTimeout(2500 + Math.random() * 1000);
+	}
+
+	private async checkCaptcha(page: Page, errorCount: number) {
+		const isCaptchaVisible = await page.locator('#captcha_slide_button').isVisible();
+
+		if (isCaptchaVisible) {
+			this.executeFunctions.logger.info('🧩 CAPTCHA detected!');
+			const notifyCaptchaScript = `
+					() => {
+						const captcha = document.querySelector('#captcha_slide_button');
+						if (captcha) {
+							console.log('🧩 CAPTCHA detected!');
+							const startTime = Date.now();
+							let stopAlarm = false;
+
+							const playAlarm = () => {
+								// kiểm tra còn captcha không
+								const captchaStillVisible = document.querySelector('#captcha_slide_button');
+								if (!captchaStillVisible || stopAlarm) {
+									console.log('✅ Captcha gone, stop alarm');
+									return;
+								}
+
+								const audio = new Audio('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg');
+								audio.play().catch(err => console.error('Audio play error:', err));
+
+								// dừng ngay nếu captcha biến mất
+								const interval = setInterval(() => {
+									const stillVisible = document.querySelector('#captcha_slide_button');
+									if (!stillVisible) {
+										console.log('✅ Captcha gone during playback, stopping...');
+										stopAlarm = true;
+										clearInterval(interval);
+										audio.pause();
+										audio.currentTime = 0;
+									}
+								}, 1000);
+
+								// phát lại khi hết bài nếu chưa đủ 4 phút
+								audio.onended = () => {
+									clearInterval(interval);
+									if (!stopAlarm && Date.now() - startTime < 4 * 60 * 1000) {
+										playAlarm();
+									}
+								};
+							};
+
+							playAlarm();
+						} else {
+							console.log('✅ No captcha, continue scraping...');
+						}
+						return true;
+					}
+				`;
+
+			await page.evaluate(
+				({ script }) => {
+					const func = eval(script);
+					return func();
+				},
+				{ script: notifyCaptchaScript },
+			);
+
+			// chờ captcha dis
+			await page
+				.waitForSelector('#captcha_slide_button', {
+					state: 'hidden',
+					timeout: 5 * 60 * 1000,
+				})
+				.catch(() => {
+					this.executeFunctions.logger.error('❌ Error waiting for captcha to disappear:');
+					errorCount++;
+					throw new Error('❌ Error waiting for captcha to disappear');
+				});
+		}
 	}
 }
