@@ -82,7 +82,7 @@ export class PostReelsFacebookNode implements INodeType {
 			userAgent: undefined,
 		};
 
-		const postReelsCommand = new PostReelsFacebookCommand({
+		const postReelsCommand = new PostReelsFacebookCommand(this, {
 			os: this.getNodeParameter('os', 0) as OS,
 			showBrowser: this.getNodeParameter('showBrowser', 0) as boolean,
 			isCloseBrowser: this.getNodeParameter('isCloseBrowser', 0) as boolean,

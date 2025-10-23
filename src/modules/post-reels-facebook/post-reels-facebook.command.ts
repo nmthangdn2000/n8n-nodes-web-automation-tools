@@ -2,6 +2,7 @@ import { Page } from 'playwright-core';
 import { launchBrowser } from '@/src/utils/browser.util';
 import { retry } from '@/src/utils/common.util';
 import { SettingType } from '@/src/types/setting.type';
+import { IExecuteFunctions } from 'n8n-workflow';
 
 type PostReelsFacebookCommandInputs = SettingType & {
 	video_path: string;
@@ -11,9 +12,11 @@ type PostReelsFacebookCommandInputs = SettingType & {
 
 export class PostReelsFacebookCommand {
 	private readonly settings: PostReelsFacebookCommandInputs;
+	private readonly executeFunctions: IExecuteFunctions;
 
-	constructor(settings: PostReelsFacebookCommandInputs) {
+	constructor(executeFunctions: IExecuteFunctions, settings: PostReelsFacebookCommandInputs) {
 		this.settings = settings;
+		this.executeFunctions = executeFunctions;
 	}
 
 	async run() {
@@ -121,42 +124,106 @@ export class PostReelsFacebookCommand {
 
 	private async postReels(page: Page, input: PostReelsFacebookCommandInputs) {
 		try {
-			await page.goto('https://www.facebook.com/reels/create/');
-
-			await page.setInputFiles('input[type="file"]', input.video_path);
-
-			await page.waitForSelector('div[aria-label="Next"][role="button"]');
-			await page.click('div[aria-label="Next"]');
-
-			await page.waitForTimeout(1000);
-
-			const nextButtonStep2 = page.locator('div[aria-label="Next"][role="button"]').nth(1);
-			await nextButtonStep2.click();
-
-			await page.waitForSelector('div[role="form"]');
-			const editor = page.locator('div[role="form"] [contenteditable="true"]');
-			await editor.click();
-			await page.keyboard.type(input.description, {
-				delay: 100,
-			});
-
-			await page.waitForTimeout(1000);
-
-			const publishButton = page.locator(
-				'div[aria-label="Publish"][role="button"]:not([aria-disabled="true"])',
-			);
-			await publishButton.waitFor({ state: 'visible' });
-			await publishButton.click();
+			await page.locator('div[role="button"]:has-text("Reel")').click();
 
 			await page.waitForTimeout(2000);
 
-			await page.waitForSelector('[role="status"][aria-label="Loading..."]', {
-				state: 'hidden',
-			});
+			const currentUrl = page.url();
+			if (currentUrl.includes('/reels/create/')) {
+				return this.postReelsOldUrl(page, input);
+			}
 
-			return true;
+			return this.postReelsNewUrl(page, input);
 		} catch (error) {
+			this.executeFunctions.logger.error('Đăng reels thất bại');
 			throw error;
 		}
+	}
+
+	private async postReelsOldUrl(page: Page, input: PostReelsFacebookCommandInputs) {
+		await page.goto('https://www.facebook.com/reels/create/');
+
+		await page.setInputFiles('input[type="file"]', input.video_path);
+
+		await page.waitForSelector('div[aria-label="Next"][role="button"]');
+		await page.click('div[aria-label="Next"]');
+
+		await page.waitForTimeout(1000);
+
+		const nextButtonStep2 = page.locator('div[aria-label="Next"][role="button"]').nth(1);
+		await nextButtonStep2.click();
+
+		await page.waitForSelector('div[role="dialog"] form[method="POST"]');
+
+		const editor = page.locator('div[role="dialog"] form[method="POST"] [contenteditable="true"]');
+		await editor.click();
+		await page.keyboard.type(`${input.description} `, {
+			delay: 50,
+		});
+
+		await page.waitForTimeout(1000);
+
+		const publishButton = page.locator(
+			'div[aria-label="Publish"][role="button"]:not([aria-disabled="true"])',
+		);
+		await publishButton.waitFor({ state: 'visible' });
+		await publishButton.click();
+
+		await page.waitForTimeout(2000);
+
+		await page.waitForSelector('[role="status"][aria-label="Loading..."]', {
+			state: 'hidden',
+		});
+
+		this.executeFunctions.logger.info('✅ Reels đã được đăng thành công');
+	}
+
+	private async postReelsNewUrl(page: Page, input: PostReelsFacebookCommandInputs) {
+		await page.setInputFiles(
+			'div[aria-label="Reels"][role="form"] input[type="file"]',
+			input.video_path,
+		);
+
+		await page.waitForSelector('div[aria-label="Next"][role="button"]');
+		await page.click('div[aria-label="Next"]');
+
+		await page.waitForTimeout(1000);
+
+		const nextButtonStep2 = page.locator('div[aria-label="Next"][role="button"]').nth(1);
+		await nextButtonStep2.click();
+
+		const form = page.locator('form[method="POST"]').nth(1);
+		await form.waitFor({ state: 'visible' });
+		const editor = form.locator('[contenteditable="true"]').nth(1);
+		await editor.click();
+
+		await page.keyboard.type(`${input.description} `, {
+			delay: 50,
+		});
+
+		await page.waitForTimeout(1000);
+
+		const publishButton = page.locator(
+			'div[aria-label="Post"][role="button"]:not([aria-disabled="true"])',
+		);
+		await publishButton.waitFor({ state: 'visible' });
+		await publishButton.click();
+
+		await page.waitForTimeout(2000);
+
+		const modal = page.locator('div[role="dialog"]');
+		if ((await modal.count()) > 0) {
+			this.executeFunctions.logger.info('✅ Reels đã được đăng thành công');
+			return true;
+		}
+
+		this.executeFunctions.logger.info('✅ Reels đã được đăng thành công');
+		return true;
+
+		// await page.waitForSelector('[role="status"][aria-label="Loading..."]', {
+		// 	state: 'hidden',
+		// });
+
+		// this.executeFunctions.logger.info('✅ Reels đã được đăng thành công');
 	}
 }

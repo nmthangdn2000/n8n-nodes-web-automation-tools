@@ -200,6 +200,12 @@ export class PostTiktokModule {
 			await switchContent.click();
 		}
 
+		if (!checked) {
+			// Xử lý modal "Stop copyright checking?" nếu có
+			await this.handleStopCopyrightModal(page);
+			return;
+		}
+
 		await this.waitForCopyrightStatusResult(page, wrapper, 'copyright check');
 	}
 
@@ -216,6 +222,12 @@ export class PostTiktokModule {
 		const current = await switchContent.getAttribute('aria-checked');
 		if ((checked && current === 'false') || (!checked && current === 'true')) {
 			await switchContent.click();
+		}
+
+		if (!checked) {
+			// Xử lý modal "Stop copyright checking?" nếu có
+			await this.handleStopCopyrightModal(page);
+			return;
 		}
 
 		await this.waitForStatusResult(page, wrapper, 'content check');
@@ -368,6 +380,38 @@ export class PostTiktokModule {
 		}
 	}
 
+	private async handleStopCopyrightModal(page: Page) {
+		try {
+			// Kiểm tra modal "Stop copyright checking?" với title chứa "Stop copyright checking"
+			const stopModal = page.locator('.TUXModal.common-modal[role="dialog"]').filter({
+				has: page.locator('.TUXText:has-text("Stop copyright checking")'),
+			});
+
+			if (await stopModal.isVisible({ timeout: 3000 })) {
+				this.executeFunctions.logger.info(
+					'⚠️ Stop copyright checking modal detected, clicking Stop button...',
+				);
+
+				// Tìm và click button "Stop" (primary button)
+				const stopButton = stopModal.locator(
+					'.common-modal-footer .TUXButton--primary .TUXButton-label:has-text("Stop")',
+				);
+
+				if (await stopButton.isVisible({ timeout: 2000 })) {
+					await stopButton.click();
+					this.executeFunctions.logger.info(
+						'✅ Stop copyright checking modal handled successfully',
+					);
+					await page.waitForTimeout(1000);
+				} else {
+					this.executeFunctions.logger.warn('⚠️ Could not find Stop button in copyright modal');
+				}
+			}
+		} catch (error) {
+			this.executeFunctions.logger.error('Error handling stop copyright modal:', error);
+		}
+	}
+
 	private async clickEditVideoButton(page: Page, autoSelectMusic: boolean = true) {
 		try {
 			this.executeFunctions.logger.info('🎬 Looking for Edit video button...');
@@ -388,17 +432,32 @@ export class PostTiktokModule {
 					state: 'visible',
 				});
 
-				const firstMusicCard = page.locator('.music-card-container').first();
-				await firstMusicCard.hover();
+				// Lấy tất cả music card containers
+				const musicCards = page.locator('.music-card-container');
+				const musicCardsCount = await musicCards.count();
 
-				const useButton = page
-					.locator('.music-card-container')
-					.first()
-					.locator(`button:has-text("${translate('use', this.language)}")`);
-				await useButton.waitFor({ state: 'visible', timeout: 5000 });
-				await useButton.click();
+				this.executeFunctions.logger.info(`🎵 Found ${musicCardsCount} music cards`);
 
-				await page.waitForTimeout(2000);
+				if (musicCardsCount > 0) {
+					// Random chọn 1 music card
+					const randomIndex = Math.floor(Math.random() * musicCardsCount);
+					this.executeFunctions.logger.info(
+						`🎲 Randomly selected music card at index: ${randomIndex}`,
+					);
+
+					const selectedMusicCard = musicCards.nth(randomIndex);
+					await selectedMusicCard.hover();
+
+					const useButton = selectedMusicCard.locator(
+						`button:has-text("${translate('use', this.language)}")`,
+					);
+					await useButton.waitFor({ state: 'visible', timeout: 5000 });
+					await useButton.click();
+
+					await page.waitForTimeout(2000);
+				} else {
+					this.executeFunctions.logger.warn('⚠️ No music cards found');
+				}
 			} else {
 				this.executeFunctions.logger.info(
 					'🎵 Auto select music is disabled, skipping music selection',
