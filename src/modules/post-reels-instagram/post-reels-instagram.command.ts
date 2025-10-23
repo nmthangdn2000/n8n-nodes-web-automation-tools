@@ -5,7 +5,6 @@ import { Locator, Page } from 'playwright-core';
 type PostReelsInstagramCommandInputs = SettingType & {
 	video_path: string;
 	description: string;
-	is_share_to_reels_facebook: boolean;
 	is_hide_like_and_view_counts: boolean;
 	is_turn_off_commenting: boolean;
 };
@@ -74,8 +73,6 @@ export class PostReelsInstagramCommand {
 
 			dialog = page.locator('div[role="dialog"]');
 
-			await this.shareToReelsFacebook(page, dialog, this.settings.is_share_to_reels_facebook);
-
 			await this.advancedSettings(
 				page,
 				dialog,
@@ -114,44 +111,6 @@ export class PostReelsInstagramCommand {
 		} finally {
 			if (this.settings.isCloseBrowser && browser) {
 				await browser.close();
-			}
-		}
-	}
-
-	private async shareToReelsFacebook(
-		page: Page,
-		dialog: Locator,
-		is_share_to_reels_facebook: boolean,
-	) {
-		const buttonDropdownShareTo = dialog.locator('div[role="button"]:has-text("Share to")');
-		const parentDropdownShareTo = buttonDropdownShareTo.locator('xpath=..');
-		const containerDropdownShareTo = parentDropdownShareTo.locator('div.html-div');
-		if ((await containerDropdownShareTo.count()) === 0) {
-			await buttonDropdownShareTo.click();
-		}
-
-		const inputShareToReels = containerDropdownShareTo.locator('input[type="checkbox"]');
-
-		const isChecked = await inputShareToReels.isChecked();
-
-		if (isChecked !== is_share_to_reels_facebook) {
-			await inputShareToReels.click();
-			await page.waitForTimeout(1000);
-			if (is_share_to_reels_facebook) {
-				await page
-					.locator('button:has-text("Share this reel")')
-					.click({
-						timeout: 1000,
-					})
-					.catch(() => {});
-			} else {
-				await page.waitForTimeout(1000);
-				await page
-					.locator(`button:has-text("Don't share this reel")`)
-					.click({
-						timeout: 1000,
-					})
-					.catch(() => {});
 			}
 		}
 	}

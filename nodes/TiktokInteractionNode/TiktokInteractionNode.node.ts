@@ -5,57 +5,63 @@ import type {
 	INodeTypeDescription,
 } from 'n8n-workflow';
 import { NodeConnectionType } from 'n8n-workflow';
-import { PostReelsInstagramCommand } from '@/src/modules/post-reels-instagram/post-reels-instagram.command';
+import { TiktokInteractionModule } from '@/src/modules/tiktok-interaction/tiktok-interaction.module';
 import { OS } from '@/src/types/setting.type';
 import { getBrowserUIComponents } from '@/src/shared/browser-ui.components';
 
-export class PostReelsInstagramNode implements INodeType {
+export class TiktokInteractionNode implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'Post Reels Instagram',
-		name: 'postReelsInstagramNode',
+		displayName: 'TikTok Interaction Node',
+		name: 'tiktokInteractionNode',
 		group: ['transform'],
 		version: 1,
-		description: 'Post a reels video to Instagram',
+		description: 'Spam TikTok feed by scrolling and interacting with random videos (like, comment)',
 		defaults: {
-			name: 'Post Reels Instagram',
+			name: 'TikTok Interaction',
 		},
 		icon: {
-			light: 'file:instagram.svg',
-			dark: 'file:instagram.svg',
+			light: 'file:tiktok.svg',
+			dark: 'file:tiktok.svg',
 		},
 		inputs: [NodeConnectionType.Main],
 		outputs: [NodeConnectionType.Main],
 		properties: [
 			{
-				displayName: 'Video Path',
-				name: 'videoPath',
+				displayName: 'Like',
+				name: 'enableLike',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to enable like interaction',
+			},
+			{
+				displayName: 'Comment',
+				name: 'enableComment',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to enable comment interaction',
+			},
+			{
+				displayName: 'Comment Text',
+				name: 'commentText',
 				type: 'string',
 				default: '',
-				placeholder: 'C:/Users/YourUsername/Videos/your_video.mp4',
-				description: 'The path to the video file',
+				placeholder: 'Great video! 👍',
+				description: 'The text to comment',
+				displayOptions: {
+					show: {
+						enableComment: [true],
+					},
+				},
+			},
+			{
+				displayName: 'Action Interval (Seconds)',
+				name: 'actionInterval',
+				type: 'string',
+				default: '5',
+				placeholder: '5 or 5,10 for random 5-10 seconds',
+				description:
+					'Time to wait between actions. Use single number (5) or range (5,10) for random interval.',
 				required: true,
-			},
-			{
-				displayName: 'Description',
-				name: 'description',
-				type: 'string',
-				default: '',
-				placeholder: 'Enter your reels description',
-				description: 'The description of the reels',
-			},
-			{
-				displayName: 'Hide Like and View Counts',
-				name: 'hideLikeAndViewCounts',
-				type: 'boolean',
-				default: false,
-				description: 'Whether to hide like and view counts',
-			},
-			{
-				displayName: 'Turn Off Commenting',
-				name: 'turnOffCommenting',
-				type: 'boolean',
-				default: false,
-				description: 'Whether to turn off commenting',
 			},
 			...getBrowserUIComponents(),
 		],
@@ -89,7 +95,11 @@ export class PostReelsInstagramNode implements INodeType {
 			userAgent: undefined,
 		};
 
-		const postReelsCommand = new PostReelsInstagramCommand({
+		const tiktokInteractionModule = new TiktokInteractionModule(this, {
+			enableLike: this.getNodeParameter('enableLike', 0) as boolean,
+			enableComment: this.getNodeParameter('enableComment', 0) as boolean,
+			commentText: this.getNodeParameter('commentText', 0) as string,
+			actionInterval: this.getNodeParameter('actionInterval', 0) as string,
 			os: this.getNodeParameter('os', 0) as OS,
 			showBrowser: this.getNodeParameter('showBrowser', 0) as boolean,
 			isCloseBrowser: this.getNodeParameter('isCloseBrowser', 0) as boolean,
@@ -101,19 +111,14 @@ export class PostReelsInstagramNode implements INodeType {
 			timezoneId: settings.timezoneId,
 			userAgent: settings.userAgent,
 			websocketUrl: websocketUrl,
-			video_path: this.getNodeParameter('videoPath', 0) as string,
-			description: this.getNodeParameter('description', 0) as string,
-			is_hide_like_and_view_counts: this.getNodeParameter('hideLikeAndViewCounts', 0) as boolean,
-			is_turn_off_commenting: this.getNodeParameter('turnOffCommenting', 0) as boolean,
 		});
 
-		const urlPost = await postReelsCommand.run();
+		const result = await tiktokInteractionModule.run();
 
-		// Add the input parameters to the output
 		const returnData = items.map((item) => {
 			return {
 				json: {
-					url: urlPost,
+					...result,
 				},
 			};
 		});
