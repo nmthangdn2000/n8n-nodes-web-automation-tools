@@ -83,7 +83,10 @@ export class TiktokInteractionModule {
 	}
 
 	private async searchPage(page: Page) {
-		await page.goto(`https://www.tiktok.com/search?q=${this.settings.search}`, {
+		const encodedSearch = encodeURIComponent(this.settings.search || '');
+		const t = Date.now();
+
+		await page.goto(`https://www.tiktok.com/search?q=${encodedSearch}&t=${t}`, {
 			waitUntil: 'networkidle',
 		});
 
@@ -92,7 +95,13 @@ export class TiktokInteractionModule {
 
 		const aTag = videoContainer.locator('a').first();
 		await aTag.waitFor({ state: 'visible', timeout: 5000 });
-		await aTag.click();
+		await this.humanClick(videoContainer, page);
+
+		await page.waitForLoadState('networkidle');
+
+		// data-e2e="browse-video"
+		const dialog = page.locator('div[tabindex="0"][role="dialog"][aria-modal="true"]');
+		await dialog.waitFor({ state: 'visible', timeout: 5000 });
 
 		let errorCount = 0;
 
@@ -105,7 +114,7 @@ export class TiktokInteractionModule {
 			try {
 				this.executeFunctions.logger.info('🔄 Scrolling and interacting with TikTok feed...');
 
-				await this.humanScrollOnArticle(videoContainer, page);
+				await this.humanScrollOnArticle(dialog, page);
 				await page.waitForTimeout(this.parseActionInterval(this.settings.actionInterval));
 
 				// click follow button
@@ -118,6 +127,9 @@ export class TiktokInteractionModule {
 					if (text.trim() === 'Follow') {
 						await this.humanClick(followButton, page);
 						await page.waitForTimeout(1000);
+					} else {
+						this.executeFunctions.logger.info('✅ User is already followed');
+						continue;
 					}
 				}
 
@@ -153,7 +165,7 @@ export class TiktokInteractionModule {
 
 			await page.waitForTimeout(this.parseActionInterval(this.settings.actionInterval));
 
-			await this.humanScrollOnArticle(videoContainer, page);
+			await this.humanScrollOnArticle(dialog, page);
 
 			errorCount = 0;
 			videoCount++;
